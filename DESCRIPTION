@@ -1,7 +1,7 @@
 Package: gmediation
 Type: Package
 Title: Mediation Analysis for Multiple and Multi-Stage Mediators
-Version: 0.1.0
+Version: 0.1.2
 Author: Jang Ik Cho, Jeffrey Albert
 Maintainer: Jang Ik Cho <jxc864@case.edu>
 Description: Current version of this R package conducts mediation path analysis for multiple mediators in two stages.

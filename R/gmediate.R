@@ -71,7 +71,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   #############################################
   ## Count number of mediators in each stage ##
   #############################################
-  if(class(model.m1)[1] == "list"){
+  if(is.list(model.m1)){
     if(is.null(names(model.m1))){
       numberofm1 = length(model.m1)
     } else {
@@ -82,7 +82,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     numberofm1 = 1
   }
 
-  if(class(model.m2)[1] == "list"){
+  if(is.list(model.m2)){
     if(is.null(names(model.m2))){
       numberofm2 = length(model.m2)
     } else {
@@ -100,7 +100,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     stop("please check your model convergence")
   }
 
-  if(class(model.m1)[1] == "list"){
+  if(is.list(model.m1)){
     if(is.null(names(model.m1))){
       for (i in numberofm1){
         if ("th.warn" %in% names(model.m1[[i]])){
@@ -119,9 +119,9 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     }
   }
 
-  if(class(model.m2)[1] == "list"){
+  if(is.list(model.m2)){
     if(is.null(names(model.m2))){
-      for (i in numberofm2){
+      for (i in 1:numberofm2){
         if ("th.warn" %in% names(model.m2[[i]])){
           stop("please check your model convergence")
         }
@@ -384,7 +384,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
 
   ##-- Define reference group
   if (is.null(ref)){
-    data.cr = gdata
+    data.cr0 = gdata
   } else {
     data.cr0 = c()
     for (i in 2:length(ref)){
@@ -968,33 +968,11 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     }
   }
 
-  ###############################
-  ##-- Print out the results --##
-  ###############################
-  cat("\n\n")
-  cat("Causal Mediation Analysis", "\n")
-  cat("Exposure:", expos[1], "\n")
-  cat("Outcome:", y, "\n")
-  cat("Sample Size Used:", dim(gdata)[1], "\n")
-  cat("Number of Bootstrap Samples Used:", dim(EDT)[1]-1, "/", bootsims, "\n")
-  if (!is.null(ref)){
-    cat("Reference Group:", ref[1], "= (", ref[2:length(ref)], "),", "Reference Group Multiplier (refmult) =", refmult, "\n")
-  }
-  if (is.null(ref)){
-    cat("Reference Group: Whole Sample,", "Reference Group Multiplier (refmult)  =", refmult, "\n")
-  }
-  if (!is.null(cluster)){
-    cat("Cluster:", cluster)
-  }
-
-  cat("\n\n")
-  cat("-------------------------------\n")
-  cat("Mediation/Path Effect Estimates\n")
-  cat("-------------------------------")
-  cat("\n\n")
-  cat("Individual Path Effects")
-  cat("\n")
-
+  #####################################
+  ##-- Organize results for output --##
+  #####################################
+  ##-- Absolute pathway effect --##
+  ##-- Table 1 : All estimated pathway effects
   effect1p = c()
   effect2p = c()
   rhop = c()
@@ -1002,7 +980,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   effectup = c()
   effectlp = c()
   pvp = c()
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       if (nullv[c] == 1){
@@ -1013,7 +991,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       }
     }
   }
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       effect1p[length(effect1p) + 1] = paste(m1ex[indexDM[1,c]])
@@ -1029,29 +1007,17 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       pvp[length(pvp) + 1] = PV[[c]][1,jd]
     }
   }
-
+  
   arrow = c(rep("--->",length(effect1p)))
-
+  
   table1 = data.frame(effect1p,arrow,effect2p,rhop,effectsp,effectlp,effectup,pvp)
-
   colnames(table1) = c(" ", "Path", " ", "Rho", "Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table1, row.names = F)
-  if (sum(nullv) > 0){
-    cat(" * = a priori null path")
-  }
-
-  cat("\n\n")
-  cat("Total Effect")
-  cat("\n")
-  cat("")
+  
+  ##-- Table 2 : Total effect
   table2 = data.frame(ESTT,ETLB,ETUB,PVT)
   colnames(table2) = c("Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table2, row.names = F)
-  cat("\n\n")
-
-  cat("First Stage Mediators")
-  cat("\n")
-  cat("")
+  
+  ##-- Table 3 : Effect of first stage mediators
   m1names = c()
   m1est = c()
   m1ciu = c()
@@ -1066,12 +1032,8 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   }
   table3 = data.frame(m1names,m1est,m1cil,m1ciu,m1pv)
   colnames(table3) = c("Mediator","Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table3, row.names = F)
-  cat("\n\n")
-
-  cat("Second Stage Mediators")
-  cat("\n")
-  cat("")
+  
+  ##-- Table 4 : Effect of second stage mediators
   m2names = c()
   m2est = c()
   m2ciu = c()
@@ -1089,12 +1051,9 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   m2rho = c(rep(sens.par,numberofm2))
   table4 = data.frame(m2names,m2rho,m2est,m2cil,m2ciu,m2pv)
   colnames(table4) = c("Mediator","Rho","Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table4, row.names = F)
-  cat("\n\n")
-
-  #######################################################
-  ##-- Organize Proportion of Estimated Path Effects --##
-  #######################################################
+  
+  ##-- Proportion of pathway effect --##
+  ##-- Table 5 : All estimated pathway effects
   ##-- Calculate proportion of estimated path effects from the original data
   PEST = vector("list", npath)
   for (c in 1:npath){
@@ -1103,7 +1062,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       PEST[[c]][j] = round(EST[[c]][j]/ESTT,4)
     }
   }
-
+  
   ##-- Calculate proportions from bootstrap samples to get 95% CI
   PESTCI = vector("list", npath)
   for (c in 1:npath){
@@ -1114,7 +1073,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       }
     }
   }
-
+  
   ##-- Select 95% CI
   PESTCILB = vector("list", npath)
   PESTCIUB = vector("list", npath)
@@ -1130,16 +1089,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       PPV[[c]][1,jd] = format(round((2 * min(ecdf(PESTCI[[c]][1:bootsims,jd])(0), ecdf(-PESTCI[[c]][1:bootsims,jd])(0))),4),nsmall = 4)
     }
   }
-
-  ##-- Draw Table 5 : Proportion of estimated path effects
-  cat("\n")
-  cat("----------------------------------------------\n")
-  cat("Estimated Proportions of Total Effect Mediated\n")
-  cat("----------------------------------------------")
-  cat("\n\n")
-  cat("Individual Path Effects")
-  cat("\n")
-
+  
   proeffect1p = c()
   proeffect2p = c()
   prorhop = c()
@@ -1147,7 +1097,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   proeffectup = c()
   proeffectlp = c()
   propvp = c()
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       if (nullv[c] == 1){
@@ -1158,7 +1108,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       }
     }
   }
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       proeffect1p[length(proeffect1p) + 1] = paste(m1ex[indexDM[1,c]])
@@ -1174,24 +1124,19 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       propvp[length(propvp) + 1] = PPV[[c]][1,jd]
     }
   }
-
+  
   arrow = c(rep("--->",length(proeffect1p)))
-
+  
   table5 = data.frame(proeffect1p,arrow,proeffect2p,prorhop,proeffectsp,proeffectlp,proeffectup,propvp)
-
   colnames(table5) = c(" ", "Path", " ", "Rho", "Est Prop", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table5, row.names = F)
-  if (sum(nullv) > 0){
-    cat(" * = a priori null path")
-  }
-  cat("\n\n")
-
+  
+  ##-- Table 6 : Effect of first stage mediators
   ##-- Calculate proportion of estimated effects of 1st stage mediators
   PEDM1 = vector("list",numberofm1)
   for (j in 1:numberofm1){
     PEDM1[[j]] = round(EDM1[[j]]/ESTT,4)
   }
-
+  
   ##-- Calculate proportions from bootstrap samples to get 95% CI
   PEDMCI1 = vector("list",numberofm1)
   for (j in 1:numberofm1){
@@ -1199,7 +1144,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       PEDMCI1[[j]][b] = EDB1[[j]][b]/EDT[b]
     }
   }
-
+  
   ##-- Select 95% CI
   PEDM1L = vector("list", numberofm1)
   PEDM1U = vector("list", numberofm1)
@@ -1210,17 +1155,13 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     # get p-value for test of effect = 0
     PPV1[[j]] = format(round(2 * min(ecdf(PEDMCI1[[j]][1:bootsims])(0), ecdf(-PEDMCI1[[j]][1:bootsims])(0)),4),nsmall = 4)
   }
-
-  ##-- Draw Table 6 : Proportion of estimated 1st stage mediator effects
-  cat("First Stage Mediators")
-  cat("\n")
-  cat("")
+  
   prom1names = c()
   prom1est = c()
   prom1ciu = c()
   prom1cil = c()
   prom1pv = c()
-
+  
   for (i in 1:numberofm1){
     prom1names[i] = paste(m1[[i]])
     prom1est[i] = PEDM1[[i]]
@@ -1228,12 +1169,11 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     prom1ciu[i] = PEDM1U[[i]]
     prom1pv[i] = PPV1[[i]]
   }
-
+  
   table6 = data.frame(prom1names,prom1est,prom1cil,prom1ciu,prom1pv)
   colnames(table6) = c("Mediator","Est Prop", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table6, row.names = F)
-  cat("\n\n")
-
+  
+  ##-- Table 7 : Effect of second stage mediators
   ##-- Calculate proportion of estimated effects of 2nd stage mediators
   PEDM2 = vector("list",numberofm2)
   for (k in 1:numberofm2){
@@ -1241,7 +1181,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       PEDM2[[k]][jd] = round(EDM2[[k]][jd]/ESTT,4)
     }
   }
-
+  
   ##-- Calculate proportions from bootstrap samples to get 95% CI
   PEDMCI2 = vector("list",numberofm2)
   for (k in 1:numberofm2){
@@ -1252,7 +1192,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       }
     }
   }
-
+  
   ##-- Select 95% CI
   PEDM2L = vector("list", numberofm2)
   PEDM2U = vector("list", numberofm2)
@@ -1265,12 +1205,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       PPV2[[k]][jd] = format(round(2 * min(ecdf(PEDMCI2[[k]][jd,1:bootsims])(0), ecdf(-PEDMCI2[[k]][jd,1:bootsims])(0)),4),nsmall = 4)
     }
   }
-
-  ##-- Draw Table 7 : Proportion of estimated 2st stage mediator effects
-  cat("Second Stage Mediators")
-  cat("\n")
-  cat("")
-
+  
   prom2names = c()
   prom2est = c()
   prom2ciu = c()
@@ -1288,27 +1223,14 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   prom2rho = c(rep(sens.par,numberofm2))
   table7 = data.frame(prom2names,prom2rho,prom2est,prom2cil,prom2ciu,prom2pv)
   colnames(table7) = c("Mediator","Rho","Est Prop", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table7, row.names = F)
-  cat("\n\n")
-
-  ## prepare for output objects
-  # each output table
-  table1n = table1[,-2]
-  colnames(table1n) = c("1st Stage Mediator","2nd Stage Mediators",colnames(table1)[4:8])
-  table2n = table2
-  table3n = table3
-  table4n = table4
-  table5n = table5[,-2]
-  colnames(table1n) = c("1st Stage Mediator","2nd Stage Mediator",colnames(table1)[4:8])
-  table6n = table6
-  table7n = table7
-
+  
+  ##-- finalize for output objects --##
   # bootstrap estimates
   EDM.out = vector("list",npath)
   for (c in 1:npath){
     EDM.out[[c]] = EDM[[c]][-(bootsims+1),]
   }
-
+  
   # model fit
   mfit = vector("list", numberofm1+numberofm2+1)
   # model for first stage mediators
@@ -1322,13 +1244,21 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     mfit[[numberofm1+k]][[2]] = summary(modelb.m2[[k]])$coefficient
   }
   # model for y
-  mfit[[numberofm1+numberofm2+1]][[1]] = modelb.y$formula
+  if (family.y == "negbin")
+  {mfit[[numberofm1+numberofm2+1]][[1]] = call.y$formula} else 
+  {mfit[[numberofm1+numberofm2+1]][[1]] = modelb.y$formula}
   mfit[[numberofm1+numberofm2+1]][[2]] = summary(modelb.y)$coefficient
-
-  return(invisible(list(indiv.path = table1n, total.path = table2n, first.path = table3n, second.path = table4n,
-              prop.indiv.path = table5n, prop.first.path = table6n, prop.second.path = table7n,
-              boot.est = EDM.out, model.fit = mfit)))
-
+  
+  ########################
+  ##-- Output objects --##
+  ########################
+  gmedout = list(indiv.path = table1, total.path = table2, first.path = table3, second.path = table4,
+                 prop.indiv.path = table5, prop.first.path = table6, prop.second.path = table7,
+                 boot.est = EDM.out, model.fit = mfit,
+                 expos = expos, y = y, data = gdata, EDT = EDT, bootsims = bootsims, ref = ref, refmult = refmult,
+                 cluster = cluster, nullv = nullv)
+  class(gmedout) = "gmediateout"
+  return(gmedout)
 }  #end of gmediate function
 
 
