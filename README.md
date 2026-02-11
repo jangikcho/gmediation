@@ -1,2 +1,2 @@
 # gmediation
-R package to conduct path analysis with multiple mediators in two stages
+R package to conduct causal mediation analysis
