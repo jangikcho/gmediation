@@ -15,6 +15,8 @@
 * `gmediate()` gains a `table_out` argument to write its summary tables to
   an Excel workbook, and its printed output now uses base-R formatted tables.
 * New example data set `dental`.
+* New vignette `vignette("gmedsens")` documenting `gmedsens()`; the
+  `gmediate` vignette now points to it.
 
 ## Breaking changes
 
