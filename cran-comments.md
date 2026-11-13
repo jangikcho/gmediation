@@ -4,7 +4,7 @@
 
 `gmediation` (version 0.1.0) was previously on CRAN and was archived on
 2020-05-19 because check problems were not corrected in time. This
-submission (version 1.0.0) addresses [[NOTE: fill in specifically what the
+submission (version 2.0.0) addresses [[NOTE: fill in specifically what the
 original check problems were and how they were resolved, once you have
 reproduced them with the current R CMD check output]].
 
@@ -19,6 +19,13 @@ reproduced them with the current R CMD check output]].
   gains `table_out`.
 * Renamed several `gmediate()` arguments for consistency with `gmedsens()`:
   `bootsims` -> `boots`, `sig.level` -> `CIPCT`, `sens.par` -> `xcorrv`.
+
+* Version 2.0.0 refactors `gmediate()` and `gmedsens()` into small internal
+  functions with unit tests, adds S3 classes with `print()`/`plot()` methods
+  (assigned results no longer print), drops six imports, and fixes several
+  bugs (RR scale, negative-binomial dispersion, binary second-stage
+  mediators in `gmedsens()`, missing-value handling); see NEWS.md for the full
+  list and for the behaviour changes.
 
 ## Test environments
 

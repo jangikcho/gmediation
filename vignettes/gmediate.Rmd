@@ -147,9 +147,11 @@ Arguments used above:
   duplicated by this factor in the mediation formula computation to reduce
   Monte Carlo error
 
-`names(single)` lists the objects returned by `gmediate()`: `indiv.path`,
+`names(single)` lists the objects returned by `gmediate()` (an object of class `"gmediate"`, printed only when you ask
+for it): `indiv.path`,
 `total.path`, `first.path`, `second.path`, `prop.indiv.path`,
-`prop.first.path`, `prop.second.path`, `boot.est`, and `model.fit`. The
+`prop.first.path`, `prop.second.path`, `boot.est`, `model.fit`, and
+`settings`. The
 `*.path` objects give the estimated path effects, the `prop.*.path` objects
 give the proportion of the total exposure effect mediated through each
 path, `boot.est` gives the estimates from every bootstrap sample, and

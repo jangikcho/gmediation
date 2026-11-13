@@ -30,7 +30,8 @@ gmedsens(
   rows_per_page = 16,
   plot_out = c("false", ""),
   table_out = c("false", ""),
-  maxcnt = 100
+  maxcnt = 100,
+  print_report = TRUE
 )
 }
 \arguments{
@@ -77,14 +78,14 @@ correlations between residuals) evaluated for non-identifiable paths.}
 \item{scale}{character string specifying the scale on which path effects
 are summarized (e.g. \code{"MeanDiff"}).}
 
-\item{deltsi}{numeric tolerance used when checking whether a computed
-correlation/covariance falls within a valid range.}
+\item{deltsi}{step of the grid of the sensitivity parameter \eqn{\rho}:
+\eqn{\rho} runs over \code{-1 + i * deltsi} (default 0.05, i.e. -0.95
+to 0.95). Must be in (0, 1) and give at least one grid point.}
 
 \item{tol}{numeric convergence tolerance used in the root-finding /
 probability-matching steps of the sensitivity calculations.}
 
-\item{tolx}{numeric convergence tolerance used for the argument (x) in the
-root-finding steps of the sensitivity calculations.}
+\item{tolx}{deprecated and ignored; kept so that existing calls still work.}
 
 \item{assumvars}{character vector naming the mediator/outcome variables
 for which non-identifiable paths should be evaluated across
@@ -127,10 +128,29 @@ results for every pair, identified by the \code{Rho.Between} column.}
 
 \item{maxcnt}{maximum number of iterations allowed in the internal
 root-finding routines used for the sensitivity calculations.}
+
+\item{print_report}{print the report when the analysis finishes (default
+\code{TRUE}). It lists the output files and their location, so it is shown
+even when the result is assigned. Use \code{FALSE} to suppress it.}
 }
 \value{
-Called primarily for its side effects (see Details); returns
-  \code{NULL} invisibly.
+An object of class \code{"gmedsens"}, a list with elements
+  \describe{
+    \item{\code{path}}{data frame with the path-specific sensitivity
+      results (columns \code{Path}, \code{Xcorr}, the sensitivity
+      parameter \eqn{\rho}, \code{Estimate}, \code{Lower.CI},
+      \code{Upper.CI} and \code{Rho.Between}); \code{NULL} if empty.}
+    \item{\code{first.stage}}{data frame with the first-stage mediator
+      results; \code{NULL} if empty.}
+    \item{\code{second.stage}}{data frame with the second-stage mediator
+      results; \code{NULL} if empty.}
+    \item{\code{curves}}{long data frame with every sensitivity curve
+      (estimate and confidence limits by \eqn{\rho}) used for the plots.}
+    \item{\code{settings}}{list of the analysis settings.}
+    \item{\code{files}}{paths of the files written (plots PDF, CSV
+      tables), if any.}
+  }
+  Use \code{print()} for the report and \code{plot()} for the plots.
 }
 \description{
 Extends the mediation/path effect framework of \code{\link{gmediate}} with
@@ -158,13 +178,16 @@ As with \code{\link{gmediate}}, the default reference group, \code{ref =
 reference group may instead be specified as a vector giving the reference
 group variable name and value(s).
 
-\code{gmedsens} is called primarily for its side effects: it prints a
-summary of the analysis and sensitivity tables/plots to the console /
-graphics device, when \code{plot_out[1] = "true"} writes all sensitivity
-plots to a single PDF in the directory given in \code{plot_out[2]}, and,
-when \code{table_out[1] = "true"}, writes the resulting path-specific,
-first-stage, and second-stage sensitivity tables as CSV files to the
-directory given in \code{table_out[2]}.
+\code{gmedsens} returns an object of class \code{"gmedsens"} holding the
+sensitivity tables and curves. The report (which files were written and
+where, and the settings used) is printed when the analysis finishes, even
+when the result is assigned to an object, unless \code{print_report =
+FALSE}; use \code{print()} to show it again and \code{plot()} to draw the
+sensitivity plots. When \code{plot_out[1] =
+"true"} all sensitivity plots are also written to a single PDF in the
+directory given in \code{plot_out[2]}, and, when \code{table_out[1] =
+"true"}, the path-specific, first-stage, and second-stage sensitivity tables
+are written as CSV files to the directory given in \code{table_out[2]}.
 }
 \examples{
 \donttest{

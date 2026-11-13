@@ -21,7 +21,7 @@ install.packages("gmediation")
 or, for the development version, from source:
 
 ```r
-install.packages("gmediation_1.0.0.tar.gz", repos = NULL, type = "source")
+install.packages("gmediation_2.0.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Example
@@ -41,7 +41,7 @@ single <- gmediate(data = dental, model.m1 = list(model.m11),
                     expos = c("ses", 1), seed = 1234, boots = 100,
                     cluster = NULL, decomp = 1, CIPCT = 95,
                     xcorrv = c(0, 0.9), refmult = 1)
-single
+single          # printing is explicit: assigned results do not print by themselves
 ```
 
 ### Sensitivity analysis with `gmedsens()`
@@ -65,6 +65,12 @@ gmedsens(data = dental, model.m1 = list(model.m11),
          plot_out = c("true", out_dir), table_out = c("true", out_dir))
 ```
 
+Unlike `gmediate()`, `gmedsens()` prints its report when it finishes even if
+you assign the result: it lists the CSV tables and the PDF that were written
+and where. Add `print_report = FALSE` to suppress it. The returned object
+holds the tables (`path`, `first.stage`, `second.stage`) and can be redrawn with
+`plot()`.
+
 This call takes about one to two minutes. Each plot shows an estimated
 path-specific effect, with its confidence band, against the sensitivity
 parameter; the example below is the first page of the PDF.
@@ -73,6 +79,14 @@ parameter; the example below is the first page of the PDF.
 
 See `vignette("gmediate", package = "gmediation")` and
 `vignette("gmedsens", package = "gmediation")` for full worked examples.
+
+## What is new in 2.0.0
+
+Refactored internals, S3 classes with `print()` / `plot()` methods, bug fixes
+(RR scale, negative-binomial dispersion, binary second-stage mediators in
+`gmedsens()`, missing-value handling), fewer dependencies and a test suite.
+Assigned `gmediate()` results no longer print automatically. See `NEWS.md`
+for all changes and the numbers they affect.
 
 ## Development notes
 
