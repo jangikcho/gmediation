@@ -44,8 +44,35 @@ single <- gmediate(data = dental, model.m1 = list(model.m11),
 single
 ```
 
-See `vignette("gmediate", package = "gmediation")` for a full worked
-example, including `gmedsens()`.
+### Sensitivity analysis with `gmedsens()`
+
+Some path effects rely on an untestable assumption of no unmeasured
+confounding between two mediators, or between a mediator and the response.
+`gmedsens()` re-evaluates the affected path effects over a grid of assumed
+correlations (`xcorrv`) between the corresponding residuals. It takes the
+same models and arguments as `gmediate()`, plus optional `plot_out` and
+`table_out` arguments to save the sensitivity plots (one PDF) and tables
+(CSV files):
+
+```r
+out_dir <- file.path(tempdir(), "gmedsens_example")
+
+gmedsens(data = dental, model.m1 = list(model.m11),
+         model.m2 = list(model.m21), model.y = model.y1,
+         expos = c("ses", 1), seed = 1234, boots = 100,
+         cluster = NULL, decomp = 1, CIPCT = 95,
+         xcorrv = c(0, 0.5, 0.9), refmult = 1,
+         plot_out = c("true", out_dir), table_out = c("true", out_dir))
+```
+
+This call takes about one to two minutes. Each plot shows an estimated
+path-specific effect, with its confidence band, against the sensitivity
+parameter; the example below is the first page of the PDF.
+
+![Path-specific effect vs. sensitivity parameter](man/figures/gmedsens-pse.png)
+
+See `vignette("gmediate", package = "gmediation")` and
+`vignette("gmedsens", package = "gmediation")` for full worked examples.
 
 ## Development notes
 
