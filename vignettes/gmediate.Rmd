@@ -1,5 +1,5 @@
 ---
-title: "gmediation: Causal Mediation and Path Analysis with gmediate and gmedsens"
+title: "gmediation: Causal Mediation and Path Analysis with gmediate"
 author: "Jang Ik Cho, Jeffrey Albert"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -188,71 +188,20 @@ first-stage and two second-stage mediators, use `seed = 352`, and use
 decomposition option 2. The interpretation of the results is similar to
 that of Example 1.
 
-## `gmedsens()`: probabilistic sensitivity analysis
+## Sensitivity analysis with `gmedsens()`
 
-`gmedsens()` builds on the same model specifications used for `gmediate()`,
-but evaluates how path effect estimates change across a grid of assumed
-correlations (`xcorrv`) for paths that are not identifiable from the data
-alone. This provides a way to assess how sensitive the substantive
-conclusions are to that un-testable assumption. It also supports cluster
-bootstrap resampling (via `cluster`), and can optionally write its summary
-tables to CSV files (via `table_out`) and all of its sensitivity plots to a
-single PDF file (via `plot_out`).
-
-```{r, fig.show = "hold"}
-gmedsens(data = dental, model.m1 = list(model.m11, model.m12),
-         model.m2 = list(model.m21, model.m22), model.y = model.y2,
-         expos = c("ses", 1), seed = 443095, boots = 100,
-         cluster = "momid", decomp = 2, CIPCT = 95,
-         xcorrv = c(0, 0.5, 0.9), scale = "MeanDiff",
-         assumvars = c("dmftd", "ohi"), g = 1, ndig = 4,
-         n_rows = 1, n_cols = 1, rows_per_page = 18, maxcnt = 100)
-```
-
-Arguments used above that are new relative to `gmediate()`:
-
-- `cluster = "momid"` : `momid` identifies each child's mother; bootstrap
-  resampling is performed by resampling mothers (clusters) with
-  replacement, so that all children of a sampled mother are included together
-- `xcorrv = c(0, 0.5, 0.9)` : the grid of assumed correlations evaluated for
-  non-identifiable paths
-- `assumvars = c("dmftd", "ohi")` : restricts the sensitivity evaluation to
-  paths involving these variables
-- `g` : a scaling factor applied to the assumed between-mediator /
-  mediator-outcome correlation grid
-- `ndig`, `n_rows`, `n_cols`, `rows_per_page` : control the formatting and
-  pagination of the sensitivity tables/plots
-- `table_out` : left at its default, `c("false", "")`, so no CSV files are
-  written; set the first element to `"true"` and the second to a directory
-  path to export the path-specific, first-stage, and second-stage
-  sensitivity tables as CSV files
-- `plot_out` : left at its default, `c("false", "")`, so no PDF is written;
-  set the first element to `"true"` and the second to a directory path to
-  save every sensitivity plot in one PDF file, `gmedsens_all_plots.pdf`
-
-### Saving tables and plots
-
-The example below writes the sensitivity tables and the plots PDF to a
-temporary directory. In your own work, replace `tempdir()` with the folder
-where you want the files to be saved (it is created if it does not exist).
-When `assumvars = "ALL"` (the default), every pair of assumption variables is
-evaluated; the exported CSV files then stack the results for all pairs, and
-the `Rho.Between` column identifies the pair each row belongs to.
-
-```{r, eval = FALSE}
-out_dir <- file.path(tempdir(), "gmedsens_output")
-gmedsens(data = dental, model.m1 = list(model.m11, model.m12),
-         model.m2 = list(model.m21, model.m22), model.y = model.y2,
-         expos = c("ses", 1), seed = 443095, boots = 100,
-         cluster = "momid", decomp = 2, CIPCT = 95,
-         xcorrv = c(0, 0.5, 0.9), scale = "MeanDiff",
-         plot_out = c("true", out_dir), table_out = c("true", out_dir))
-list.files(out_dir)
-```
-
-`gmedsens()` is called primarily for its output (printed summary and
-sensitivity tables/plots); see `?gmedsens` for full details of each
-returned/printed component.
+Some path effects are identified only under an assumption that cannot be
+tested with the data (no unmeasured confounding between two mediators, or
+between a mediator and the response). `gmedsens()` uses the same model
+specifications as `gmediate()` but re-evaluates those path effects across a
+grid of assumed correlations (`xcorrv`), so that you can assess how
+sensitive the conclusions are to that assumption. It supports cluster
+bootstrap resampling (via `cluster`) and can write its tables to CSV files
+(via `table_out`) and all of its sensitivity plots to a single PDF file (via
+`plot_out`). Because it repeats the bootstrap analysis over the whole grid,
+a typical call takes a minute or more; see
+`vignette("gmedsens", package = "gmediation")` for worked examples with the
+same `dental` data and models used above.
 
 ## See also
 
