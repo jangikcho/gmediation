@@ -1,73 +1,128 @@
-#' @title Generalized Causal Mediation and Path Analysis
+#' Generalized Causal Mediation and Path Analysis
 #'
-#' @description This function estimates causal mediation and path effects for models with two stages of mediation
-#' @param data a data frame
-#' @param model.m1 a list of the model fit from each first stage mediators
-#' @param model.m2 a list of the model fit from each second stage mediators
-#' @param model.y an object of the model fit from the response variable
-#' @param expos a vector with the name of the exposure variable and exposure value e.g. c("exposure variable name", c(exposure value))
-#' @param ref a vector with the name of the reference group variable and reference group value e.g. c("reference group variable name", c(reference group value))
-#' @param refmult numeric value used as a multiplier to increase the number of monte carlo draws
-#' @param seed seed to generate bootstrap samples
-#' @param bootsims number of bootstrap samples to generate
-#' @param cluster the cluster variable that will be used for cluster bootstrap resampling
-#' @param decomp option with two choices for decomposition of total exposure effect
-#' @param sig.level confidence level for bootstrap confidence interval
-#' @param sens.par a vector with numeric values for sensitivity parameters to be used when the path is non-identifiable
-#' @importFrom stats ecdf getCall na.omit pbinom pnbinom pnorm ppois predict quantile rbinom rnbinom rnorm rpois runif
-#' @importFrom plyr count
-#' @import MASS
-#' @export
-#' @seealso \href{https://cran.r-project.org/package=mediation}{mediation}
-#' @return NULL
-#' @details
-#' This function carries out inference for mediation (path) effects based on user-specified models. The function allows for two stages of mediation (up to three links from exposure/treatment, X, to final outcome, Y), and an arbitrary number of mediators at each stage. The user specifies an allowed generalized regression model for each outcome (Y and each mediator). Allowed distributions (link functions) include: normal (identity link), Bernoulli (logit link), Poisson (log link), and negative binomial (log link); note that canonical links are used for each distribution. Unsaturated models (i.e., leaving out earlier stage mediators) are allowed, possibly imposing a prior null paths. Baseline (pre-exposure) covariates may be included in each model. The user-specified models are re-fit in the function using the complete cases (based on all the model variables).
+#' Estimates causal mediation and path effects for models with up to two
+#' stages of mediation. The function allows an arbitrary number of mediators
+#' at each stage, computes individual path effects, first- and second-stage
+#' mediator effects, and the total exposure effect, and derives bootstrap
+#' confidence intervals for each.
 #'
-#' The user may also specify a reference group, effectively defining the empirical multivariate baseline covariate distribution used in the mediation formula; this may be viewed as defining the sub-population to which inference is performed. The default reference group is the whole (complete case) sample. The reference group may also be ‘cloned’ by a specified integer multiple (“refmult”) to reduce Monte Carlo error (at the possible cost of longer computing time).
+#' This function carries out inference for mediation (path) effects based on
+#' user-specified models. The function allows for two stages of mediation (up
+#' to three links from exposure/treatment, X, to final outcome, Y), and an
+#' arbitrary number of mediators at each stage. The user specifies an allowed
+#' generalized regression model for each outcome (Y and each mediator).
+#' Allowed distributions (link functions) include: normal (identity link),
+#' Bernoulli (logit link), Poisson (log link), and negative binomial (log
+#' link); canonical links are used for each distribution. Unsaturated models
+#' (i.e., leaving out earlier stage mediators) are allowed. Baseline
+#' (pre-exposure) covariates may be included in each model. The user-specified
+#' models are re-fit in the function using the complete cases (based on all
+#' the model variables).
 #'
-#' An extended mediation formula is used to estimate each path effect. The sum of effects (or ‘overall effect’) for paths through each mediator is also computed. For paths (and overall) effects that are ‘non-identifiable’, multiple estimates are provided according to specified sensitivity parameters values (“sens.par”, a list of values between – 1 and 1), the default values being -0.9, 0, 0.5, and 0.9. Path effects have alternative versions depending on the manner in which the total exposure effect is decomposed. Two choices, using “decomp”, are provided; the ordering of mediators in specified models also generally affect the decomposition.
+#' The user may also specify a reference group, effectively defining the
+#' empirical multivariate baseline covariate distribution used in the
+#' mediation formula; this may be viewed as defining the sub-population to
+#' which inference is performed. The default reference group, \code{ref =
+#' "entire sample"}, is the whole (complete case) sample. The reference group
+#' may also be "cloned" by a specified integer multiple (\code{refmult}) to
+#' reduce Monte Carlo error (at the possible cost of longer computing time).
 #'
-#' Bootstrap resampling is used to obtain bootstrap percentile method confidence intervals (at the 95 percent, or user-specified, confidence level). The option “cluster” can be used to specify a unit (aside from the individual, that is, each data record, which is the default) for which cluster bootstrap resampling is performed.
+#' Bootstrap resampling is used to obtain bootstrap percentile method
+#' confidence intervals (at the specified confidence level, \code{CIPCT}).
+#' The option \code{cluster} can be used to specify a unit (aside from the
+#' individual, that is, each data record, which is the default) for which
+#' cluster bootstrap resampling is performed.
+#'
+#' @param data a data frame containing all variables used in the outcome and
+#'   mediator models.
+#' @param model.m1 a list of the model fit(s) for the first-stage mediator(s).
+#' @param model.m2 a list of the model fit(s) for the second-stage
+#'   mediator(s).
+#' @param model.y an object with the model fit for the response (outcome)
+#'   variable.
+#' @param expos a vector with the name of the exposure variable and the
+#'   exposure value, e.g. \code{c("exposure variable name", exposure value)}.
+#' @param ref reference group specification. Either the default
+#'   \code{"entire sample"}, meaning the whole complete-case sample is used
+#'   as the reference group, or a vector with the name of the reference group
+#'   variable and the reference group value(s), e.g. \code{c("reference group
+#'   variable name", c(reference group value))}.
+#' @param refmult numeric multiplier used to increase the number of Monte
+#'   Carlo draws taken from the reference group, to reduce Monte Carlo error.
+#' @param seed seed used to generate bootstrap samples.
+#' @param boots number of bootstrap samples to generate.
+#' @param cluster the cluster variable used for cluster bootstrap resampling,
+#'   if applicable. Default is \code{NULL} (individual-level resampling).
+#' @param xcorrv a vector of sensitivity parameter values (correlations, on
+#'   the latent/linear predictor scale) used when a path is non-identifiable.
+#' @param scale character string specifying the scale on which path effects
+#'   are summarized (e.g. \code{"MeanDiff"}).
+#' @param CIPCT confidence level (as a percentage) used for the bootstrap
+#'   confidence intervals.
+#' @param decomp integer (1 or 2) specifying which of two available
+#'   decompositions of the total exposure effect is used to define path
+#'   effects; the ordering of mediators in the specified models also
+#'   generally affects the decomposition.
+#' @param table_out a length-2 character vector controlling whether the
+#'   summary tables are written to disk. The first element is \code{"true"}
+#'   or \code{"false"} (the default), and the second is the directory in
+#'   which to write the Excel workbook \code{gmediate_summary_tables.xlsx}
+#'   (created if it does not exist) when the first element is \code{"true"}.
+#'
+#' @return An (invisible) list with the following components:
+#' \describe{
+#'   \item{indiv.path}{estimates and confidence intervals for individual path
+#'     effects.}
+#'   \item{total.path}{estimate and confidence interval for the total
+#'     exposure effect.}
+#'   \item{first.path}{estimates and confidence intervals for first-stage
+#'     mediator effects.}
+#'   \item{second.path}{estimates and confidence intervals for second-stage
+#'     mediator effects.}
+#'   \item{prop.indiv.path}{estimated proportions of the total effect
+#'     mediated through each individual path.}
+#'   \item{prop.first.path}{estimated proportions of the total effect
+#'     mediated through each first-stage mediator.}
+#'   \item{prop.second.path}{estimated proportions of the total effect
+#'     mediated through each second-stage mediator.}
+#'   \item{boot.est}{path effect estimates from all bootstrap samples.}
+#'   \item{model.fit}{model fits from the complete case data used to fit
+#'     each mediator and outcome model.}
+#' }
+#'
+#' @seealso \code{\link{gmedsens}} for a probabilistic sensitivity analysis
+#'   built on the same modeling framework.
 #'
 #' @examples
-#' library(gmediation)
+#' \donttest{
+#' model.y1 <- glm(dmftd ~ ses + grpvlb + grpbpd + race + SEX + brush + seal,
+#'                  family = binomial, data = dental)
+#' model.m11 <- glm(brush ~ ses + grpvlb + grpbpd + race + SEX,
+#'                   family = binomial, data = dental)
+#' model.m21 <- glm(seal ~ ses + grpvlb + grpbpd + race + SEX + brush,
+#'                   family = binomial, data = dental)
 #'
-#' ## mediation analysis for two stage mediators with one mediator at each stage
-#' model.y1 <- glm(dmftd ~ ses + grpvlb + grpbpd + race + SEX + brush + seal, family = binomial,
-#'                 data = dental)
-#' model.m11 <- glm(brush ~ ses + grpvlb + grpbpd + race + SEX, family = binomial, data = dental)
-#' model.m21 <- glm(seal ~ ses + grpvlb + grpbpd + race + SEX + brush, family = binomial,
-#'                  data = dental)
-#' single <- gmediate(data = dental, model.m1 = list(model.m11), model.m2 = list(model.m21),
-#'                    model.y = model.y1, expos = c("ses", 1), ref = c("ses", c(0,1)), seed = 1234,
-#'                    bootsims = 100, cluster = NULL, decomp = 1, sig.level = 95, sens.par = c(0),
-#'                    refmult = 1)
+#' single <- gmediate(data = dental, model.m1 = list(model.m11),
+#'                     model.m2 = list(model.m21), model.y = model.y1,
+#'                     expos = c("ses", 1), seed = 1234, boots = 100,
+#'                     cluster = NULL, decomp = 1, CIPCT = 95,
+#'                     xcorrv = c(0, 0.9), refmult = 1)
 #' single
 #' names(single)
+#' }
 #'
-#'\dontrun{
-#' ## mediation analysis for two stage mediators with two mediator at each stage
-#' model.y2 <- glm(dmftd ~ ses + grpvlb + grpbpd + race + SEX + brush + visit + seal + ohi,
-#'                 family = binomial, data = dental)
-#' model.m11 <- glm(brush ~ ses + grpvlb + grpbpd + race + SEX, family = binomial, data = dental)
-#' model.m12 <- glm(visit ~ ses + grpvlb + grpbpd + race + SEX, family = binomial, data = dental)
-#' model.m21 <- glm(seal ~ ses + grpvlb + grpbpd + race + SEX + brush + visit, family = binomial,
-#'                  data = dental)
-#' model.m22 <- glm(ohi ~ ses + grpvlb + grpbpd + race + SEX + brush + visit, family = gaussian,
-#'                  data = dental)
-#' gmediate(data = dental, model.m1 = list(model.m11,model.m12), model.m2 = list(model.m21,model.m22),
-#'          model.y = model.y2, expos = c("ses", 1), ref = c("ses", c(0,1)), seed = 352,
-#'          bootsims = 100, cluster = NULL, decomp = 2, sig.level = 95, sens.par = c(0,0.9),
-#'          refmult = 2)
-#'}
-#'
-
-
-
-gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
-                    refmult = 1, seed = 1234, bootsims = 500, cluster = NULL,
-                    decomp = 1, sig.level = 95, sens.par = c(-0.9, 0, 0.5, 0.9)){
-
+#' @importFrom stats na.omit predict quantile ecdf getCall pnorm pbinom ppois
+#'   pnbinom rbinom rnbinom rnorm rpois runif
+#' @importFrom MASS glm.nb rnegbin
+#' @importFrom plyr count
+#' @importFrom kableExtra kbl kable_classic_2 row_spec
+#' @importFrom knitr kable
+#' @importFrom VGAM probitlink
+#' @export
+gmediate = function(data, model.m1, model.m2, model.y, expos, ref = "entire sample", refmult=100,
+         seed = 443095, boots = 499, cluster = NULL, xcorrv = c(0, 0.5, 0.9),  scale = "MeanDiff",
+         CIPCT = 95, decomp = 2, table_out = c("false","")){
+  
   #############################################
   ## Count number of mediators in each stage ##
   #############################################
@@ -81,7 +136,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   } else {
     numberofm1 = 1
   }
-
+  
   if(class(model.m2)[1] == "list"){
     if(is.null(names(model.m2))){
       numberofm2 = length(model.m2)
@@ -92,20 +147,20 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   } else {
     numberofm2 = 1
   }
-
+  
   #############################
   ## Define Warning messages ##
   #############################
   if("th.warn" %in% names(model.y)){
     stop("please check your model convergence")
   }
-
+  
   if(class(model.m1)[1] == "list"){
     if(is.null(names(model.m1))){
       for (i in numberofm1){
         if ("th.warn" %in% names(model.m1[[i]])){
           stop("please check your model convergence")
-
+          
         }
       }
     } else{
@@ -118,7 +173,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       stop("please check your model convergence")
     }
   }
-
+  
   if(class(model.m2)[1] == "list"){
     if(is.null(names(model.m2))){
       for (i in numberofm2){
@@ -136,17 +191,17 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       stop("please check your model convergence")
     }
   }
-
+  
   ##############
   ## Set seed ##
   ##############
   set.seed(seed)
-
+  
   #########################################
   ## Select complete cases from the data ##
   #########################################
   gdata = na.omit(data)
-
+  
   ######################################################
   ## Identify response and covariates from the models ##
   ######################################################
@@ -154,39 +209,39 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   yvar = names(model.y$model)
   y = yvar[1]
   y.allcov = yvar[-1]
-
+  
   # model m2
   m2 = vector("list", numberofm2)
   m2.eachcov = vector("list", numberofm2)
-
+  
   for (i in 1:numberofm2){
     m2[[i]] = names(model.m2[[i]]$model)[1]
     m2.eachcov[[i]] = names(model.m2[[i]]$model)[-1]
   }
-
+  
   # model m1
   m1 = vector("list", numberofm1)
   m1.eachcov = vector("list", numberofm1)
-
+  
   for (i in 1:numberofm1){
     m1[[i]] = names(model.m1[[i]]$model)[1]
     m1.eachcov[[i]] = names(model.m1[[i]]$model)[-1]
   }
-
+  
   # all covariates in m2 models
   m2.tempcov = c()
   for (i in 1:numberofm2){
     m2.tempcov = c(m2.tempcov, m2.eachcov[[i]])
   }
   m2.allcov = unique(m2.tempcov)
-
+  
   # all covariates in m1 models
   m1.tempcov = c()
   for (i in 1:numberofm1){
     m1.tempcov = c(m1.tempcov, m1.eachcov[[i]])
   }
   m1.allcov = unique(m1.tempcov)
-
+  
   ##-- choose non overlapping covariates with m1 and m2 from y model
   overlap.y = which(y.allcov %in% c(m2,m1))
   if(length(overlap.y) == 0){
@@ -194,7 +249,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   } else {
     y.cov = y.allcov[-overlap.y]
   }
-
+  
   ##-- choose non overlapping covariates with m1 from m2 model
   overlap.m2 = which(m2.allcov %in% c(m1))
   if(length(overlap.m2) == 0){
@@ -202,11 +257,11 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   } else {
     m2.cov = m2.allcov[-overlap.m2]
   }
-
+  
   m1.cov = m1.allcov
-
+  
   covariates = c(unique(c(y.cov, m2.cov, m1.cov)))
-
+  
   #################################################################################################################
   ## y : y outcome in vector format                                                                              ##
   ## m2 : second stage mediators in list format                                                                  ##
@@ -221,26 +276,26 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   ## m1.cov : independent variables in m1 models                                                                 ##
   ## covariates : union of all independent variables excluding first and second stage mediators in vector format ##
   #################################################################################################################
-
+  
   #############################################
   ## Check for required model specifications ##
   #############################################
   ##- define initial functions and values
   # negate function
   `%ni%` = Negate(`%in%`)
-
+  
   # number of possible pathways
   npath = (numberofm1 + 1) * (numberofm2 + 1)
-
+  
   # number of correlations
-  nrho = length(sens.par)
-
+  nrho = length(xcorrv)
+  
   ##- check model specifications
   # need at least 1 1st stage and 1 2nd stage med
   if (numberofm1 * numberofm2 == 0) {
     stop("Need at least 1 mediator for each stage")
   }
-
+  
   # check second stage mediator model specifications
   for (k in 1:numberofm2) {
     # check if M2s are not exposure
@@ -262,13 +317,13 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     if (!check2) {
       stop("At least one M1 must be in each M2 model")
     }
-
+    
     # check if each M2 in Y model
     if (m2[[k]] %ni% y.allcov) {
       stop("Each M2 must be in Y model")
     }
   }
-
+  
   # check first stage mediator model specifications
   for (j in 1:numberofm1) {
     # check if exposure is in every M1 model
@@ -284,7 +339,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       stop("Final outcome cannot be mediator")
     }
   }
-
+  
   # check that each M1 is in some M2 or in the Y model
   for (j in 1:numberofm1) {
     check12 = FALSE
@@ -301,7 +356,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       stop("Each M1 must be a covariate in the Y or some M2 model")
     }
   }
-
+  
   #################################
   ##- Collect Model Information -##
   #################################
@@ -309,27 +364,27 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   family.y = list()
   family.m2 = list()
   family.m1 = list()
-
+  
   # call for model
   call.y = list()
   call.m2 = list()
   call.m1 = list()
-
+  
   # variables in each model
   names.y = list()
   names.m2 = list()
   names.m1 = list()
-
+  
   # Initialize "variables" matrix using variables used in Y model
   variables = matrix(names(model.y$model))
-
+  
   # model information from y model
   family.y = model.y$family$family
   isNegBin = grep("Negative Binomial", substr(family.y,1,17))
   if (length(isNegBin) == 1) {family.y = "negbin"}
-
+  
   call.y = getCall(model.y)
-
+  
   # model information from 2nd stage mediator's models
   for (k in 1:numberofm2) {
     # model can be from glm or glm.nb
@@ -337,14 +392,14 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     family.m2[[k]] = model.m2[[k]]$family$family
     isNegBin = grep("Negative Binomial", substr(family.m2[[k]],1,17))
     if (length(isNegBin) == 1) {family.m2[[k]] = "negbin"}
-
+    
     # call of model for each m2
     call.m2[[k]] = getCall(model.m2[[k]])
-
+    
     names.m2[[k]] = matrix(names(model.m2[[k]]$model))
     variables = rbind(variables ,names.m2[[k]])
   }
-
+  
   # model information from 1st stage mediator's models
   for (j in 1:numberofm1) {
     # model can be from glm or glm.nb
@@ -352,18 +407,18 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     family.m1[[j]] = model.m1[[j]]$family$family
     isNegBin = grep("Negative Binomial", substr(family.m1[[j]],1,17))
     if (length(isNegBin == 1)) {family.m1[[j]] = "negbin"}
-
+    
     # call of model for each m1
     call.m1[[j]] = getCall(model.m1[[j]])
-
+    
     names.m1[[j]] = matrix(names(model.m1[[j]]$model))
     variables = rbind(variables, names.m1[[j]])
   }
-
+  
   if (length(cluster) == 1) {
     variables = rbind(variables, matrix(cluster))
   }
-
+  
   ###################################################################################
   ##-- family.y : list of distribution family from y model                       --##
   ##-- family.m2 : list of distribution families from 2nd stage mediators models --##
@@ -372,7 +427,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   ##-- call.m1 : model information from 1st stage mediators models               --##
   ##-- variables : variables used in the entire models                           --##
   ###################################################################################
-
+  
   ###############################################
   ##-- data.cr : dataset for reference group --##
   ###############################################
@@ -381,16 +436,16 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   pred.dat.m2 = list()
   pred.dat.m1.c = list()
   pred.dat.m1.e = list()
-
+  
   ##-- Define reference group
-  if (is.null(ref)){
+  if (identical(ref, "entire sample")){
     data.cr = gdata
   } else {
     data.cr0 = c()
     for (i in 2:length(ref)){
       data.cr0 = rbind(data.cr0, gdata[gdata[,ref[1]] == ref[i],])
     }
-
+    
     data.cr = c()
     if(refmult == 1){
       data.cr = data.cr0
@@ -400,20 +455,20 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       }
     }
   }
-
+  
   ##-- Define dataset for the reference group in Y
   pred.dat.y = data.cr[,y.allcov]
-
+  
   ##-- Define dataset for the reference group in the 2nd stage mediators
   for (k in 1:numberofm2) {
     pred.dat.m2[[k]] = data.cr[,m2.eachcov[[k]]]
   }
-
+  
   ##-- Define dataset for the reference group in the 1st stage mediators and assume all are either control or exposed
   lexp = levels(as.factor(gdata[,expos[1]]))
   exposed = as.numeric(expos[2])
   control = as.numeric(lexp[lexp != expos[2]])
-
+  
   for (j in 1:numberofm1) {
     pred.dat.m1.e[[j]] = pred.dat.m1.c[[j]] = data.frame(data.cr[,m1.eachcov[[j]]])
     colnames(pred.dat.m1.e[[j]]) = c(m1.eachcov[[j]])
@@ -421,20 +476,20 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     pred.dat.m1.e[[j]][,expos[1]] = exposed
     pred.dat.m1.c[[j]][,expos[1]] = control
   }
-
+  
   #############################################################################################################
   ##-- pred.dat.y : dataset for Y in the reference group                                                   --##
   ##-- pred.dat.m2 : dataset for 2nd stage mediators in the reference group                                --##
   ##-- pred.dat.m1.e : dataset for 1st stage mediators in the reference group assuming everyone is exposed --##
   ##-- pred.dat.m1.c : dataset for 1st stage mediators in the reference group assuming everyone is control --##
   #############################################################################################################
-
+  
   ####################################################
   ##-- Initialize matrix to define decompositions --##
   ####################################################
   indexDM = matrix(NA, 2, npath)
   cnt = 1
-
+  
   ##-- Get decomposition order for decomp = 1 (reverse for decomp = 2)
   for (j in 1:(numberofm1 + 1)) {
     for (k in 1:(numberofm2 + 1)) {
@@ -442,74 +497,74 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       cnt = cnt + 1
     }
   }
-
+  
   if (decomp == 2) {
     indexDM = indexDM[,npath:1]
   }
-
+  
   ####################################
   ##-- Generate Bootstrap Samples --##
   ####################################
-  bootsamples = vector("list", bootsims + 1)
-
+  bootsamples = vector("list", boots + 1)
+  
   if (is.null(cluster)){
     nclus = nrow(gdata)
     gdata$numsamp = c(1:nclus)
-
-    for (i in 1:bootsims){
+    
+    for (i in 1:boots){
       samp = sample(gdata$numsamp, size = nclus, replace = TRUE)
       bootsamples[[i]] = gdata[samp,]
     }
-    bootsamples[[bootsims+1]] = gdata
+    bootsamples[[boots+1]] = gdata
   }
-
+  
   if (!is.null(cluster)){
     nclus = length(unique(gdata[,cluster]))
-
-    for (i in 1:bootsims){
-      samp = sample(data[,cluster], size = nclus, replace = TRUE)
+    
+    for (i in 1:boots){
+      samp = sample(gdata[,cluster], size = nclus, replace = TRUE)
       bootsamples[[i]] = data.frame()
       for (j in 1:length(samp)){
-        bootsamples[[i]] = rbind(bootsamples[[i]],data[data[,cluster] == samp[j],])
+        bootsamples[[i]] = rbind(bootsamples[[i]],gdata[gdata[,cluster] == samp[j],])
       }
     }
-    bootsamples[[bootsims+1]] = gdata
+    bootsamples[[boots+1]] = gdata
   }
-
+  
   ##########################
   ##-- Initialize lists --##
   ##########################
   modelb.y = c()
   modelb.m2 = list()
   modelb.m1 = list()
-
+  
   mu.m2 = list()
   mu.m1 = list()
   mu.m12 = list()
   mu.m1.e = list()
   mu.m1.c = list()
-
+  
   pred.m2 = list()
   pred.m12 = list()
   pred.m1.e = list()
   pred.m1.c = list()
   pred.m1 = list()
   PredM12V = vector("list", numberofm1)
-
+  
   disp.m2 = list()    # list with dispersion par values 2nd stage
   disp.m1 = list()    # list with dispersion par values 1st stage
-
-
+  
+  
   rhrep = list()
   rhrepd = list()
-  nonnullm1 = list()  # added 9-9-16
-  IDENT = list()      # added 9-9-16
-
-  #initialize nonnullm1 457-459 added 9-9-16
+  nonnullm1 = list()  
+  IDENT = list()  
+  
+  #initialize nonnullm1 
   for (i in 1:numberofm1) {
     nonnullm1[[i]] = matrix(0,1,numberofm2+1)
   }
-
+  
   EYDM = list()      # exp pot outcome matrices for boots, rhos
   EDM = list()       # expected path effects
   EDMM2 = vector("list", nrho)
@@ -521,102 +576,102 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   EDB1 = list()
   EDB2 = vector("list", numberofm2)
   for (t in 1:numberofm2){
-    EDB2[[t]] = matrix(0, nrho, bootsims+1)
+    EDB2[[t]] = matrix(0, nrho, boots+1)
   }
-
-  EDT = matrix(0, bootsims+1, 1)
-
+  
+  EDT = matrix(0, boots+1, 1)
+  
   rho = c()
-
+  
   EDM1 = list()
   EDM1L = list()
   EDM1U = list()
   PV1 = list()
-
+  
   EDM2 = vector("list", numberofm2)
   EDM2L = vector("list", numberofm2)
   EDM2U = vector("list", numberofm2)
   PV2 = vector("list", numberofm2)
-
+  
   ########################
   ##-- Bootstrap loop --##
   ########################
   #initialize for each EY
   for (p in 1:(npath+1)) {
-    EYDM[[p]] = matrix(0,bootsims+1,nrho)
+    EYDM[[p]] = matrix(0,boots+1,nrho)
   }
-
+  
   for (c in 1 : npath){
-    EDM[[c]] = matrix(rep(0,((bootsims+1)*nrho)),bootsims+1,nrho)  #init
+    EDM[[c]] = matrix(rep(0,((boots+1)*nrho)),boots+1,nrho)  #init
   }
-
-  for (b in 1:(bootsims + 1)){
-
+  
+  for (b in 1:(boots + 1)){
+    
     nullv = matrix(0,1,npath)
     DISC = matrix(0,1,npath+1)
-
+    
     ##--  Fit models for each sample (boot and orig)
     for (k in 1:numberofm2) {
       call.m2[[k]]$data = bootsamples[[b]][, c(m2[[k]], m2.eachcov[[k]])]
-
+      
       if (family.m2[[k]] == "negbin"){
         modelb.m2[[k]] = glm.nb(call.m2[[k]]$formula, call.m2[[k]]$data)
       } else {
         modelb.m2[[k]] = eval.parent(call.m2[[k]])
       }
-
+      
       if (family.m2[[k]] == "gaussian" | family.m2[[k]] == "negbin") {
         disp.m2[[k]] = summary(modelb.m2[[k]])$disp
       }
       # Get means for indivs in ref grp
       mu.m2[[k]] = predict(modelb.m2[[k]], type = "response", newdata = pred.dat.m2[[k]])
     }
-
+    
     for (j in 1:numberofm1){
       # Get data (all model vars) for bootstrap sample for refit
-
+      
       # Note: indi (used below) not yet defined
       # should be the individual indices acc to cluster boot draw
       call.m1[[j]]$data = bootsamples[[b]][, c(m1[[j]], m1.eachcov[[j]])]
-
+      
       # Refit model using current sample (boot or orig)
       if (family.m1[[j]] == "negbin"){
         modelb.m1[[j]] = glm.nb(call.m1[[j]]$formula, call.m1[[j]]$data)
       } else {
         modelb.m1[[j]] = eval.parent(call.m1[[j]])
       }
-
+      
       if (family.m1[[j]] == "gaussian" | family.m1[[j]] == "negbin") {
         disp.m1[[j]] = summary(modelb.m1[[j]])$disp
       }
-
+      
       # Get means for indivs in ref grp under each expos status
       mu.m1.e[[j]] = predict(modelb.m1[[j]], type = "response", newdata = pred.dat.m1.e[[j]])
       mu.m1.c[[j]] = predict(modelb.m1[[j]], type = "response", newdata = pred.dat.m1.c[[j]])
     }
-
+    
     call.y$data = bootsamples[[b]][, c(y, y.allcov)]
     if (family.y == "negbin"){
       modelb.y = glm.nb(call.y$formula, call.y$data)
     } else {
       modelb.y = eval.parent(call.y)    # refit Y model
     }
-
-
+    
+    
     ##-- End of fitting models
-
+    
     ###################################################################
     ###    Med Formula: Draw values for each med, each path eff     ###
     ###################################################################
-
+    
     DM = matrix(1, numberofm1+1, numberofm2+1)
-
+    
     first = matrix(1, numberofm1, nrho)
-
+    
     nref = dim(data.cr)[1]
-
+    
     # get pred values for each m1, each expos status
-
+    
     for (j in 1:numberofm1) {
       if (family.m1[[j]] == "gaussian") {
         pred.m1.e[[j]] = rnorm(nref, mean = mu.m1.e[[j]], sd = sqrt(disp.m1[[j]]))
@@ -635,32 +690,29 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
         pred.m1.c[[j]] = rbinom(nref, size = 1, prob = mu.m1.c[[j]]) # size = 1 is for Bernoulli
       }
     }
-
+    
     rhrep[[1]] = 1   # first exp value will be ident - use 1
     DISC[1,1] = 0
-
+    
     for (c1 in 1:(npath+1)) {
       c = c1 - 1       # indexes paths
-
+      
       # = num of rhos for noniden exp potential outcomes
       # c1 = 1 is first expected potential outcome (all exposed)
-
+      
       m1chk = "Null"   # Init - will check for m1 in covs for each m2
       m2chk = "Null"
-
+      
       if (c1 == 1) {m1d = 0}
       # do after 1st exp poten outcome
       if (c1 > 1) {
         indexDMV = matrix(indexDM[,c1-1],2,1)
         DM[indexDMV[1],indexDMV[2]] = 0   # Set one value equal to 0
-
-        # Remove from here - put to 602-614
-
+        
         # indic mediator (each stage) involved in current exp poten out
         m1d = indexDMV[1] - 1
         m2d = indexDMV[2] - 1
-
-        # fixed the following 6 lines 8-10-16
+        
         if (m1d > 0)  {
           m1chk = m1[[m1d]]
         } else {
@@ -671,83 +723,83 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
         } else {
           m2chk = y.allcov
         }
-
+        
         # Check if M1 discrep - if so use full rho vector
         for (jj in 2:(numberofm1+1)) {
           for (kk in 2:(numberofm2+1)) {
             if (m1[[jj-1]] %in% m2.eachcov[[kk-1]] & DM[jj,kk] != DM[jj,1]) {   # discrep case
-              DISC[1,c1] = 1          # added 8-10-16
+              DISC[1,c1] = 1    
             }
           }
         }
-
+        
         if (DISC[1,c1] == 1) {
           rhrep[[c1]] = nrho
-        }        # added 8-11-16
+        }       
         else {rhrep[[c1]]=1}
       }
-
+      
       jdrep = rhrep[[c1]]
-
+      
       for (jd in 1:jdrep) {
-
+        
         if (c1 == 1 | m1chk %in% m2chk) {   #if cond not met - a null path (keep same EY)
-
+          
           if (m1d > 0) {                   # a path through a 1st stage mediator
-            nonnullm1[[m1d]][1,m2d+1] = 1    # 1 if not null  made correction 9-9-16
-            rho = sens.par[jd]}
-
+            nonnullm1[[m1d]][1,m2d+1] = 1    # 1 if not null
+            rho = xcorrv[jd]}
+          
           # Pred values for 1st stage mediators
-
+          
           for (j in 1:numberofm1){
-
+            
             # mean, pred value for M1j(dj0) (direct effects)
             j1 = j + 1
             mu.m1[[j]] = DM[j1,1]*mu.m1.e[[j]] + (1-DM[j1,1])*mu.m1.c[[j]]
             pred.m1[[j]] = DM[j1,1]*pred.m1.e[[j]] + (1-DM[j1,1])*pred.m1.c[[j]]
-
+            
             # if discrepant use - add next line 11-1-16
             mu.m12[[j]] = (1-DM[j1,1])*mu.m1.e[[j]] + DM[j1,1]*mu.m1.c[[j]]
             pred.m12[[j]] = (1-DM[j1,1])*pred.m1.e[[j]] + DM[j1,1]*pred.m1.c[[j]]
           }
-
+          
           # Pred values for 2nd stage mediators
-
+          
           for (k in 1:numberofm2) {
             k1 = k + 1
-
+            
             # Check whether expos is a pred for M2k
-
+            
             if (expos[1] %in% m2.eachcov[[k]]) {
               pred.dat.m2[[k]][,expos[1]] = DM[1,k1]*exposed + (1-DM[1,k1])*control
             }
-
+            
             # Get predicted values of 1st stage mediators for each
             #   2nd stage mediator (M2k), depending on the ds in DM
-
+            
             for (j in 1:numberofm1) {
-
+              
               # Check that 1st stage med is a pred for M2k
-
+              
               if (m1[[j]] %in% m2.eachcov[[k]]) {
-
+                
                 j1 = j + 1    # uncommented 11-8-16
-
+                
                 m1j = pred.m1[[j]]    # pred val for m1j (dir)
-
-                if (DM[j1,k1] == DM[j1,1]) {   # non discrep case - fix 11-1-16
+                
+                if (DM[j1,k1] == DM[j1,1]) {   # non discrep case 
                   pred.dat.m2[[k]][, m1[[j]]] = m1j
-
+                  
                   #### discrepant case - nonident path  ####
-
+                  
                 } else  {
                   if (first[j,jd]==1) {
                     if (family.m1[[j]] == "gaussian") {
                       ZM1 = (m1j - mu.m1[[j]])/sqrt(disp.m1[[j]])
                       ErrM1 = rnorm(nref, mean = 0, sd = 1)
                       ZM12 = (rho * ZM1) + sqrt(1-rho**2)*ErrM1
-                      pred.m12[[j]] = (sqrt(disp.m1[[j]])*ZM12) + mu.m12[[j]]  #edited 11-1-16
-
+                      pred.m12[[j]] = (sqrt(disp.m1[[j]])*ZM12) + mu.m12[[j]]  
+                      
                     } else {            # M1j not normal dist
                       if (family.m1[[j]] == "binomial") {
                         probjl = pbinom(m1j-1,1,mu.m1[[j]])
@@ -759,15 +811,15 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
                         probjl = pnbinom(m1j-1, size=disp.m1[[j]], mu=mu.m1[[j]])
                         probj = pnbinom(m1j, size=disp.m1[[j]], mu=mu.m1[[j]])
                       }
-
+                      
                       # generate new m1j (for discr M1 cases)
                       UM1 = runif(nref, min=0, max=1)
                       probM1 = probjl + UM1 * (probj-probjl)
-                      ZM1 = VGAM::probit(probM1)  #inv std norm
+                      ZM1 = VGAM::probitlink(probM1)  #inv std norm
                       ErrM1 = rnorm(nref, mean = 0, sd = 1)
                       ZM12 = (rho * ZM1) + sqrt(1-rho**2)*ErrM1
                       probM12 = pnorm(ZM12)  #p(Z<ZM12)
-
+                      
                       for (ind in 1:length(probM12)){
                         if (family.m1[[j]] == "binomial"){
                           PredM12V[[j]][ind] = as.numeric(probM12[ind] > pbinom(0,1,mu.m12[[j]][ind]))
@@ -788,19 +840,19 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
                       }
                       pred.m12[[j]] = PredM12V[[j]]
                     }
-
+                    
                   }  # first for j, rho
-
+                  
                   pred.dat.m2[[k]][, m1[[j]]] = pred.m12[[j]]
-
+                  
                 } #end of discrep case
-
+                
               }   # if m1j a predictor of m2k
-
+              
             }   # end of j loop (1st stage mediators)
-
+            
             # pred values for M2k (given pred m1s, covariate values
-
+            
             mu.m2[[k]] = predict(modelb.m2[[k]], type="response",newdata=pred.dat.m2[[k]])
             if (family.m2[[k]] == "gaussian") {
               pred.m2[[k]] = rnorm(nref,mean=mu.m2[[k]], sd=sqrt(disp.m2[[k]]))
@@ -814,36 +866,34 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
             if (family.m2[[k]] == "negbin") {
               pred.m2[[k]] = rnbinom(nref,size=disp.m2[[k]], mu=mu.m2[[k]])
             }
-
+            
           }       # end of k loop (2nd stage mediators)
-
+          
           #####  Expected values for Y(D)  #####
-
+          
           pred.dat.y[,expos[1]] = DM[1,1]*exposed + (1-DM[1,1])*control
-
+          
           for (j in 1:numberofm1) {
             pred.dat.y[,m1[[j]]] = pred.m1[[j]]
           }
           for (k in 1:numberofm2) {
             pred.dat.y[,m2[[k]]] = pred.m2[[k]]
           }
-
+          
           # Get expected value for Y(D) and path effects (ED)
           muY = predict(modelb.y, type="response", newdata = pred.dat.y)
-
+          
           EYDM[[c1]][b,jd] = mean(muY)
-
+          
         }
-
-        else {EYDM[[c1]][b,1] = EYDM[[c1-1]][b,1]  #null path  added 8-11-16
-        nullv[1,c]= 1   # indicates path is null  added 8-10-16
-        rhrep[[c1]] = 1  # just need one line     added 8-11-16
+        
+        else {EYDM[[c1]][b,1] = EYDM[[c1-1]][b,1]  #null path  
+        nullv[1,c]= 1   # indicates path is null  
+        rhrep[[c1]] = 1  # just need one line    
         }
-
+        
       }       # end of multiple rhos (if discrep) loop
-
-      # modified following paragraph 8-11-16
-
+      
       if ((rhrep[[c1]] < nrho)) {     # that is - rhrep = 1, then extend
         for (lt in 2:nrho) {
           if (c1==1) {EYDM[[c1]][b,lt] = EYDM[[c1]][b,1]}    # EY(1)
@@ -853,18 +903,27 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
           }
         }
       }
-
-      # Get path effects as differences in exp values
+      
+      # Get path effects as differences (or ratios) in exp values
       if (c1 > 1) {
         if (b==1) {
           if (c==1) {
-            EDMM1 = matrix(rep(0,(npath*(bootsims+1))),npath,bootsims+1)  #init
+            EDMM1 = matrix(rep(0,(npath*(boots+1))),npath,boots+1)  #init
           }
         }
-        EDM[[c]][b,] = EYDM[[c1-1]][b,] - EYDM[[c1]][b,]  #pos dif dim
-        #rhrepd[[c]] = max(rhrep[[c1]],rhrep[[c1-1]])  deleted this 9-9-16
-
-        # added following (lines 801-813) 9-9-16
+        
+        # Scale options
+        
+        if (scale == "MeanDiff" || scale == "") {
+          EDM[[c]][b,] = EYDM[[c1-1]][b,] - EYDM[[c1]][b,]
+        }
+        if (scale == "OR") {
+          EDM[[c]][b,] = log((EYDM[[c1-1]][b,]/(1-EYDM[[c1-1]][b,])) / ((EYDM[[c1]][b,])/(1-EYDM[[c1]][b,])))
+        }
+        if (scale == "RR") {
+          EDM[[c]][b,] = log(EYDM[[c1-1]][b,]/EYDM[[c1-1]][b,])
+        }
+        
         IDENT[[c]] = 0
         if (m1d == 0)  {
           IDENT[[c]] = 1
@@ -878,52 +937,70 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
         } else {
           rhrepd[[c]]=nrho
         }
-
+        
         EDMM1[c,b] = EDM[[c]][b,1]      # turn into matrix - first rho
-
+        
         #        if (rhrepd[c]==1) {
         #          EDM[[c]][b,] = EDM[[c]][b,] %*% rep(1,nrho)  # expand
         #        }
-
+        
         for (jd in 1:nrho) {
           if (b==1 & c==1) {
-            EDMM2[[jd]] = matrix(rep(0,(npath*(bootsims+1))),npath,bootsims+1)  #init
+            EDMM2[[jd]] = matrix(rep(0,(npath*(boots+1))),npath,boots+1)  #init
           }
           EDMM2[[jd]][c,b] = EDM[[c]][b,jd]
         }
       }
     }           # end of exposure configs
-
-    # for total
-    EDT[b,] = (EYDM[[1]][b,] - EYDM[[npath+1]][b,])[rhrep[[1]]]
-
+    
+    # for total - scales 
+    
+    if (scale == "MeanDiff" || scale == "") {
+      EDT[b,] = (EYDM[[1]][b,] - EYDM[[npath+1]][b,])[rhrep[[1]]]
+    }
+    if (scale == "OR") {
+      EDT[b,] = log((EYDM[[1]][b,]/(1-EYDM[[1]][b,]))/((EYDM[[npath+1]][b,])/(1-EYDM[[npath+1]][b,])))[rhrep[[1]]]
+    }
+    if (scale == "RR") {
+      EDT[b,] = log(EYDM[[1]][b,]/EYDM[[npath+1]][b,])[rhrep[[1]]]
+    }
+  
     # Get sums for each m1 mediator
     for (j in 1:numberofm1) {
       distinguish1 = sapply(1:ncol(EDMM1),function(x) EDMM1[,x] * (indexDM[1,]==j+1))
       EDB1[[j]] = sapply(1:ncol(distinguish1),function(x) sum(distinguish1[,x],na.rm=TRUE))  # sum for each m1, boots
-    }
 
+        if (scale == "OR" || scale == "RR") {
+        EDB1[[j]] = exp(EDB1[[j]])
+         }
+      }
+    
     # Get sums for each m2 mediator
     for (k in 1:numberofm2) {
       for (jd in 1:nrho) {
         distinguish2 = sapply(1:ncol(EDMM2[[jd]]),function(x) EDMM2[[jd]][,x] * (indexDM[2,]==k+1))
         EDB2[[k]][jd,] = sapply(1:ncol(distinguish2),function(x) sum(distinguish2[,x],na.rm=TRUE))
+
+        if (scale == "OR" || scale == "RR") {
+          EDB2[[k]][jd,] = exp(EDB2[[k]][jd,])
+        }
+        
       }
     }
   }    # end of bootstraps
-
-  CIALPHA = 1 - (sig.level/100)    # User inputs CI percent, e.g., 95
+  
+  CIALPHA = 1 - (CIPCT/100)    # User inputs CI percent, e.g., 95
   CILPR = CIALPHA/2
   CIUPR = 1 - CILPR
-
+  
   # Need m1, m2 name vectors to be extended with 1st entry for direct effect
   m1m = matrix(data = m1,1,numberofm1)     # m1names is list of m1 names
   m2m = matrix(data = m2,1,numberofm2)     # m2names            m2
-  rhom = matrix(data = sens.par,1,nrho)
+  rhom = matrix(data = xcorrv,1,nrho)
   m1ex = cbind("   ", m1m)
   m2ex = cbind("   ", m2m)
   rhoex = cbind("   ", rhom)   # Need user to specify vector rho for m1 vars
-
+  
   #########################################
   ##-- Organize Estimated Path Effects --##
   #########################################
@@ -932,69 +1009,46 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     EDLB[[c]] = matrix(rep(0,rhrepd[[c]]),1,rhrepd[[c]])  #init for each
     EDUB[[c]] = matrix(rep(0,rhrepd[[c]]),1,rhrepd[[c]])  #init for each
     PV[[c]] = matrix(rep(0,rhrepd[[c]]),1,rhrepd[[c]])  #init for each
-
+    
     for (jd in 1:rhrepd[[c]]) {
-      EST[[c]][1,jd] = round(EDM[[c]][bootsims+1,jd],4)   # Est path effect orig data
-      EDLB[[c]][1,jd] = round(quantile(EDM[[c]][1:bootsims,jd],CILPR,na.rm = TRUE),4) # CI lb
-      EDUB[[c]][1,jd] = round(quantile(EDM[[c]][1:bootsims,jd],CIUPR,na.rm = TRUE),4) # CI ub
-
+      EST[[c]][1,jd] = round(EDM[[c]][boots+1,jd],7)   # Est path effect orig data
+      EDLB[[c]][1,jd] = round(quantile(EDM[[c]][1:boots,jd],CILPR,na.rm = TRUE),4) # CI lb
+      EDUB[[c]][1,jd] = round(quantile(EDM[[c]][1:boots,jd],CIUPR,na.rm = TRUE),4) # CI ub
+      
       # get p-value for test of effect = 0
-      PV[[c]][1,jd] = format(round((2 * min(ecdf(EDM[[c]][1:bootsims,jd])(0), ecdf(-EDM[[c]][1:bootsims,jd])(0))),4),nsmall = 4)
+      PV[[c]][1,jd] = format(round((2 * min(ecdf(EDM[[c]][1:boots,jd])(0), ecdf(-EDM[[c]][1:boots,jd])(0))),4),nsmall = 4)
     }    # over jd (multiple rhos)
   }   # over c paths
-
-  ESTT = round(EDT[bootsims+1,],4)   # Est total effect orig data
-  ETLB = round(quantile(EDT[1:bootsims,],CILPR,na.rm = TRUE),4) # CI lb
-  ETUB = round(quantile(EDT[1:bootsims,],CIUPR,na.rm = TRUE),4)  # CI ub
-  PVT = format(round(2 * min(ecdf(EDT[1:bootsims,])(0), ecdf(-EDT[1:bootsims,])(0)),4),nsmall = 4)
-
+  
+  ESTT = round(EDT[boots+1,],7)   # Est total effect orig data
+  ETLB = round(quantile(EDT[1:boots,],CILPR,na.rm = TRUE),4) # CI lb
+  ETUB = round(quantile(EDT[1:boots,],CIUPR,na.rm = TRUE),4)  # CI ub
+  PVT = format(round(2 * min(ecdf(EDT[1:boots,])(0), ecdf(-EDT[1:boots,])(0)),4),nsmall = 4)
+  
   for (j in 1:numberofm1) {
-    EDM1[[j]] = round(EDB1[[j]][bootsims+1],4)
-    EDM1L[[j]] = round(quantile(EDB1[[j]][1:bootsims],CILPR,na.rm = TRUE),4)  # CI lower bound
-    EDM1U[[j]] = round(quantile(EDB1[[j]][1:bootsims],CIUPR,na.rm = TRUE),4)  # CI upper bound
-
+    EDM1[[j]] = round(EDB1[[j]][boots+1],7)
+    EDM1L[[j]] = round(quantile(EDB1[[j]][1:boots],CILPR,na.rm = TRUE),4)  # CI lower bound
+    EDM1U[[j]] = round(quantile(EDB1[[j]][1:boots],CIUPR,na.rm = TRUE),4)  # CI upper bound
+    
     # get p-value for test of effect = 0
-    PV1[[j]] = format(round(2 * min(ecdf(EDB1[[j]][1:bootsims])(0), ecdf(-EDB1[[j]][1:bootsims])(0)),4),nsmall = 4)
+    PV1[[j]] = format(round(2 * min(ecdf(EDB1[[j]][1:boots])(0), ecdf(-EDB1[[j]][1:boots])(0)),4),nsmall = 4)
   }
-
+  
   for (k in 1:numberofm2) {
     for (jd in 1:nrho) {
-      EDM2[[k]][jd] = round(EDB2[[k]][jd,bootsims+1],4)
-      EDM2L[[k]][jd] = round(quantile(EDB2[[k]][jd,1:bootsims],CILPR),4)  # CI lb
-      EDM2U[[k]][jd] = round(quantile(EDB2[[k]][jd,1:bootsims],CIUPR),4)  # CI ub
-
+      EDM2[[k]][jd] = round(EDB2[[k]][jd,boots+1],7)
+      EDM2L[[k]][jd] = round(quantile(EDB2[[k]][jd,1:boots],CILPR),4)  # CI lb
+      EDM2U[[k]][jd] = round(quantile(EDB2[[k]][jd,1:boots],CIUPR),4)  # CI ub
+      
       # get p-value for test of effect = 0
-      PV2[[k]][jd] = format(round(2 * min(ecdf(EDB2[[k]][jd,1:bootsims])(0),ecdf(-EDB2[[k]][jd,1:bootsims])(0)),4),nsmall = 4)
+      PV2[[k]][jd] = format(round(2 * min(ecdf(EDB2[[k]][jd,1:boots])(0),ecdf(-EDB2[[k]][jd,1:boots])(0)),4),nsmall = 4)
     }
   }
-
+  
   ###############################
   ##-- Print out the results --##
   ###############################
-  cat("\n\n")
-  cat("Causal Mediation Analysis", "\n")
-  cat("Exposure:", expos[1], "\n")
-  cat("Outcome:", y, "\n")
-  cat("Sample Size Used:", dim(gdata)[1], "\n")
-  cat("Number of Bootstrap Samples Used:", dim(EDT)[1]-1, "/", bootsims, "\n")
-  if (!is.null(ref)){
-    cat("Reference Group:", ref[1], "= (", ref[2:length(ref)], "),", "Reference Group Multiplier (refmult) =", refmult, "\n")
-  }
-  if (is.null(ref)){
-    cat("Reference Group: Whole Sample,", "Reference Group Multiplier (refmult)  =", refmult, "\n")
-  }
-  if (!is.null(cluster)){
-    cat("Cluster:", cluster)
-  }
-
-  cat("\n\n")
-  cat("-------------------------------\n")
-  cat("Mediation/Path Effect Estimates\n")
-  cat("-------------------------------")
-  cat("\n\n")
-  cat("Individual Path Effects")
-  cat("\n")
-
+  
   effect1p = c()
   effect2p = c()
   rhop = c()
@@ -1002,7 +1056,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   effectup = c()
   effectlp = c()
   pvp = c()
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       if (nullv[c] == 1){
@@ -1013,7 +1067,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       }
     }
   }
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       effect1p[length(effect1p) + 1] = paste(m1ex[indexDM[1,c]])
@@ -1029,29 +1083,42 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       pvp[length(pvp) + 1] = PV[[c]][1,jd]
     }
   }
+  
+  Path <- mapply(function(e1, e2) {
+  parts <- c(expos[1], e1, e2, y)
+  parts <- parts[!is.na(parts) & nzchar(trimws(parts))]
+  parts <- substr(parts, 1, 7)
+  paste(parts, collapse = " -> ")
+}, effect1p, effect2p, USE.NAMES = FALSE)
 
-  arrow = c(rep("--->",length(effect1p)))
+# Assemble the table
+table1 <- data.frame(
+  Path      = Path,
+  Xcorr     = rhop,
+  Estimate  = effectsp,
+  `CI Lower`= effectlp,
+  `CI Upper`= effectup,
+  `p-value` = pvp,
+  check.names = FALSE
+)
 
-  table1 = data.frame(effect1p,arrow,effect2p,rhop,effectsp,effectlp,effectup,pvp)
+colnames(table1) = c("Path", "Xcorr", "Estimate", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
 
-  colnames(table1) = c(" ", "Path", " ", "Rho", "Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table1, row.names = F)
+knitr::kable(
+  table1,
+  align = rep("c", ncol(table1))
+)
+
   if (sum(nullv) > 0){
     cat(" * = a priori null path")
   }
-
-  cat("\n\n")
-  cat("Total Effect")
-  cat("\n")
-  cat("")
+ 
   table2 = data.frame(ESTT,ETLB,ETUB,PVT)
-  colnames(table2) = c("Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table2, row.names = F)
-  cat("\n\n")
+  colnames(table2) = c("Estimate", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
+  
+  rownames(table2) <- "Total"
+  
 
-  cat("First Stage Mediators")
-  cat("\n")
-  cat("")
   m1names = c()
   m1est = c()
   m1ciu = c()
@@ -1065,13 +1132,9 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     m1pv[i] = PV1[[i]]
   }
   table3 = data.frame(m1names,m1est,m1cil,m1ciu,m1pv)
-  colnames(table3) = c("Mediator","Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table3, row.names = F)
-  cat("\n\n")
-
-  cat("Second Stage Mediators")
-  cat("\n")
-  cat("")
+  colnames(table3) = c("Mediator","Estimate", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
+  
+ 
   m2names = c()
   m2est = c()
   m2ciu = c()
@@ -1086,12 +1149,11 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       m2pv[length(m2pv) + 1] = PV2[[i]][j]
     }
   }
-  m2rho = c(rep(sens.par,numberofm2))
+  m2rho = sprintf("%.1f", rep(xcorrv, numberofm2))
   table4 = data.frame(m2names,m2rho,m2est,m2cil,m2ciu,m2pv)
-  colnames(table4) = c("Mediator","Rho","Estimate", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table4, row.names = F)
-  cat("\n\n")
-
+  colnames(table4) = c("Mediator","Xcorr","Estimate", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
+  
+  
   #######################################################
   ##-- Organize Proportion of Estimated Path Effects --##
   #######################################################
@@ -1100,21 +1162,25 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   for (c in 1:npath){
     PEST[[c]] = matrix(rep(0,rhrepd[[c]]),1,rhrepd[[c]])
     for (j in 1:rhrepd[[c]]){
-      PEST[[c]][j] = round(EST[[c]][j]/ESTT,4)
+      if(EST[[c]][j] != "*"){                         
+        PEST[[c]][j] = round(EST[[c]][j]/ESTT,4)      
+      } else {                                        
+        PEST[[c]][j] = "*"
+      }
     }
   }
-
+  
   ##-- Calculate proportions from bootstrap samples to get 95% CI
   PESTCI = vector("list", npath)
   for (c in 1:npath){
-    PESTCI[[c]] = matrix(rep(0,rhrepd[[c]]),bootsims,rhrepd[[c]])
-    for (k in 1:bootsims){
+    PESTCI[[c]] = matrix(rep(0,rhrepd[[c]]),boots,rhrepd[[c]])
+    for (k in 1:boots){
       for (jd in 1:rhrepd[[c]]){
         PESTCI[[c]][k,jd] = EDM[[c]][k,jd]/EDT[[k]]
       }
     }
   }
-
+  
   ##-- Select 95% CI
   PESTCILB = vector("list", npath)
   PESTCIUB = vector("list", npath)
@@ -1124,22 +1190,15 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     PESTCIUB[[c]] = matrix(rep(0,rhrepd[[c]]),1,rhrepd[[c]])
     PPV[[c]] = matrix(rep(0,rhrepd[[c]]),1,rhrepd[[c]])
     for (jd in 1:rhrepd[[c]]){
-      PESTCILB[[c]][1,jd] = round(quantile(PESTCI[[c]][1:bootsims,jd],CILPR,na.rm = TRUE),4) # CI lb
-      PESTCIUB[[c]][1,jd] = round(quantile(PESTCI[[c]][1:bootsims,jd],CIUPR,na.rm = TRUE),4) # CI ub
+      PESTCILB[[c]][1,jd] = round(quantile(PESTCI[[c]][1:boots,jd],CILPR,na.rm = TRUE),4) # CI lb
+      PESTCIUB[[c]][1,jd] = round(quantile(PESTCI[[c]][1:boots,jd],CIUPR,na.rm = TRUE),4) # CI ub
       # get p-value for test of proportion of effect = 0
-      PPV[[c]][1,jd] = format(round((2 * min(ecdf(PESTCI[[c]][1:bootsims,jd])(0), ecdf(-PESTCI[[c]][1:bootsims,jd])(0))),4),nsmall = 4)
+      PPV[[c]][1,jd] = format(round((2 * min(ecdf(PESTCI[[c]][1:boots,jd])(0), ecdf(-PESTCI[[c]][1:boots,jd])(0))),4),nsmall = 4)
     }
   }
-
+  
   ##-- Draw Table 5 : Proportion of estimated path effects
-  cat("\n")
-  cat("----------------------------------------------\n")
-  cat("Estimated Proportions of Total Effect Mediated\n")
-  cat("----------------------------------------------")
-  cat("\n\n")
-  cat("Individual Path Effects")
-  cat("\n")
-
+  
   proeffect1p = c()
   proeffect2p = c()
   prorhop = c()
@@ -1147,7 +1206,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
   proeffectup = c()
   proeffectlp = c()
   propvp = c()
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       if (nullv[c] == 1){
@@ -1158,7 +1217,7 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       }
     }
   }
-
+  
   for (c in 1:npath){
     for (jd in 1:rhrepd[[c]]){
       proeffect1p[length(proeffect1p) + 1] = paste(m1ex[indexDM[1,c]])
@@ -1174,53 +1233,77 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       propvp[length(propvp) + 1] = PPV[[c]][1,jd]
     }
   }
+  
+  Path <- mapply(function(e1, e2) {
+  parts <- c(expos[1], e1, e2, y)
+  parts <- parts[!is.na(parts) & nzchar(trimws(parts))]
+  parts <- substr(parts, 1, 7)
+  paste(parts, collapse = " -> ")
+}, proeffect1p, proeffect2p, USE.NAMES = FALSE)
 
-  arrow = c(rep("--->",length(proeffect1p)))
 
-  table5 = data.frame(proeffect1p,arrow,proeffect2p,prorhop,proeffectsp,proeffectlp,proeffectup,propvp)
+table5 <- data.frame(
+   Path      = Path,
+   Xcorr     = prorhop,
+  `Est Prop` = proeffectsp,
+  `CI Lower` = proeffectlp,
+  `CI Upper` = proeffectup,
+  `p-value`  = propvp,
+  check.names = FALSE
+)
 
-  colnames(table5) = c(" ", "Path", " ", "Rho", "Est Prop", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table5, row.names = F)
+table1 |>
+  kbl(
+    digits = 4,
+    align = rep("c", ncol(table1))
+  ) |>
+  row_spec(
+    0,
+    align = "center"
+  ) |>
+  kable_classic_2(
+    full_width = FALSE,
+    font_size = 12
+  )
+
   if (sum(nullv) > 0){
     cat(" * = a priori null path")
   }
-  cat("\n\n")
-
+ 
+  
   ##-- Calculate proportion of estimated effects of 1st stage mediators
   PEDM1 = vector("list",numberofm1)
   for (j in 1:numberofm1){
     PEDM1[[j]] = round(EDM1[[j]]/ESTT,4)
   }
-
+  
   ##-- Calculate proportions from bootstrap samples to get 95% CI
   PEDMCI1 = vector("list",numberofm1)
   for (j in 1:numberofm1){
-    for (b in 1:bootsims){
+    for (b in 1:boots){
       PEDMCI1[[j]][b] = EDB1[[j]][b]/EDT[b]
     }
   }
-
+  
   ##-- Select 95% CI
   PEDM1L = vector("list", numberofm1)
   PEDM1U = vector("list", numberofm1)
   PPV1 = vector("list", numberofm1)
   for (j in 1:numberofm1){
-    PEDM1L[[j]] = round(quantile(PEDMCI1[[j]][1:bootsims],CILPR,na.rm = TRUE),4)  # CI lower bound
-    PEDM1U[[j]] = round(quantile(PEDMCI1[[j]][1:bootsims],CIUPR,na.rm = TRUE),4)  # CI upper bound
+    PEDM1L[[j]] = round(quantile(PEDMCI1[[j]][1:boots],CILPR,na.rm = TRUE),4)  # CI lower bound
+    PEDM1U[[j]] = round(quantile(PEDMCI1[[j]][1:boots],CIUPR,na.rm = TRUE),4)  # CI upper bound
     # get p-value for test of effect = 0
-    PPV1[[j]] = format(round(2 * min(ecdf(PEDMCI1[[j]][1:bootsims])(0), ecdf(-PEDMCI1[[j]][1:bootsims])(0)),4),nsmall = 4)
+    PPV1[[j]] = format(round(2 * min(ecdf(PEDMCI1[[j]][1:boots])(0), ecdf(-PEDMCI1[[j]][1:boots])(0)),4),nsmall = 4)
   }
-
+  
   ##-- Draw Table 6 : Proportion of estimated 1st stage mediator effects
-  cat("First Stage Mediators")
-  cat("\n")
-  cat("")
+ 
   prom1names = c()
   prom1est = c()
   prom1ciu = c()
   prom1cil = c()
   prom1pv = c()
-
+  
   for (i in 1:numberofm1){
     prom1names[i] = paste(m1[[i]])
     prom1est[i] = PEDM1[[i]]
@@ -1228,12 +1311,12 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     prom1ciu[i] = PEDM1U[[i]]
     prom1pv[i] = PPV1[[i]]
   }
-
+  
   table6 = data.frame(prom1names,prom1est,prom1cil,prom1ciu,prom1pv)
-  colnames(table6) = c("Mediator","Est Prop", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table6, row.names = F)
-  cat("\n\n")
-
+  colnames(table6) = c("Mediator","Est Prop", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
+  
+ 
+  
   ##-- Calculate proportion of estimated effects of 2nd stage mediators
   PEDM2 = vector("list",numberofm2)
   for (k in 1:numberofm2){
@@ -1241,36 +1324,34 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       PEDM2[[k]][jd] = round(EDM2[[k]][jd]/ESTT,4)
     }
   }
-
+  
   ##-- Calculate proportions from bootstrap samples to get 95% CI
   PEDMCI2 = vector("list",numberofm2)
   for (k in 1:numberofm2){
-    PEDMCI2[[k]] = matrix(rep(0,bootsims),nrho,bootsims)
+    PEDMCI2[[k]] = matrix(rep(0,boots),nrho,boots)
     for (jd in 1:nrho){
-      for (b in 1:bootsims){
+      for (b in 1:boots){
         PEDMCI2[[k]][jd,b] = EDB2[[k]][jd,b]/EDT[b]
       }
     }
   }
-
+  
   ##-- Select 95% CI
   PEDM2L = vector("list", numberofm2)
   PEDM2U = vector("list", numberofm2)
   PPV2 = vector("list", numberofm2)
   for (k in 1:numberofm2){
     for (jd in 1:nrho){
-      PEDM2L[[k]][jd] = round(quantile(PEDMCI2[[k]][jd,1:bootsims],CILPR,na.rm = TRUE),4)  # CI lower bound
-      PEDM2U[[k]][jd] = round(quantile(PEDMCI2[[k]][jd,1:bootsims],CIUPR,na.rm = TRUE),4)  # CI upper bound
+      PEDM2L[[k]][jd] = round(quantile(PEDMCI2[[k]][jd,1:boots],CILPR,na.rm = TRUE),4)  # CI lower bound
+      PEDM2U[[k]][jd] = round(quantile(PEDMCI2[[k]][jd,1:boots],CIUPR,na.rm = TRUE),4)  # CI upper bound
       # get p-value for test of effect = 0
-      PPV2[[k]][jd] = format(round(2 * min(ecdf(PEDMCI2[[k]][jd,1:bootsims])(0), ecdf(-PEDMCI2[[k]][jd,1:bootsims])(0)),4),nsmall = 4)
+      PPV2[[k]][jd] = format(round(2 * min(ecdf(PEDMCI2[[k]][jd,1:boots])(0), ecdf(-PEDMCI2[[k]][jd,1:boots])(0)),4),nsmall = 4)
     }
   }
-
+  
   ##-- Draw Table 7 : Proportion of estimated 2st stage mediator effects
-  cat("Second Stage Mediators")
-  cat("\n")
-  cat("")
-
+ 
+  
   prom2names = c()
   prom2est = c()
   prom2ciu = c()
@@ -1285,30 +1366,105 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
       prom2pv[length(prom2pv) + 1] = PPV2[[i]][j]
     }
   }
-  prom2rho = c(rep(sens.par,numberofm2))
+  prom2rho = sprintf("%.1f", rep(xcorrv, numberofm2))
   table7 = data.frame(prom2names,prom2rho,prom2est,prom2cil,prom2ciu,prom2pv)
-  colnames(table7) = c("Mediator","Rho","Est Prop", paste(sig.level, "% CI Lower", sep=""), paste(sig.level, "% CI Upper", sep=""), "p-value")
-  print(table7, row.names = F)
-  cat("\n\n")
-
+  colnames(table7) = c("Mediator","Xcorr","Est Prop", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
+  
+ 
+  
   ## prepare for output objects
   # each output table
-  table1n = table1[,-2]
-  colnames(table1n) = c("1st Stage Mediator","2nd Stage Mediators",colnames(table1)[4:8])
+  table1n = table1
+  colnames(table1n) = c("Path", "Xcorr", "Estimate", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
   table2n = table2
   table3n = table3
   table4n = table4
-  table5n = table5[,-2]
-  colnames(table1n) = c("1st Stage Mediator","2nd Stage Mediator",colnames(table1)[4:8])
+  table5n = table5
+  colnames(table5n) = c("Path", "Xcorr", "Estimate", paste(CIPCT, "% CI Lower", sep=""), paste(CIPCT, "% CI Upper", sep=""), "p-value")
   table6n = table6
   table7n = table7
+  
+  
+  center_text <- function(x, width) {
+  n <- nchar(x)
+  left  <- floor((width - n) / 2)
+  right <- width - n - left
+  
+  paste0(
+    strrep(" ", left),
+    x,
+    strrep(" ", right)
+  )
+  }
+  
+  left_text <- function(x, width) {
+  n <- nchar(x)
+  
+  paste0(
+    x,
+    strrep(" ", width - n)
+  )
+}
 
+print_centered_table <- function(df, digits = 4, first_col_left = FALSE) {
+  
+  # Format values as text
+  df_char <- as.data.frame(
+  lapply(df, function(x) {
+    if (is.numeric(x)) {
+      format(round(x, digits), nsmall = digits, trim = TRUE)
+    } else {
+      as.character(x)
+    }
+  }),
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+  
+  # Determine required width of each column
+  widths <- sapply(seq_along(df_char), function(j) {
+    max(
+      nchar(names(df_char)[j]),
+      nchar(df_char[[j]]),
+      na.rm = TRUE
+    )
+  })
+  
+  # Center column names
+  headers <- mapply(
+    center_text,
+    names(df_char),
+    widths,
+    USE.NAMES = FALSE
+  )
+  
+  cat(paste(headers, collapse = "  "), "\n")
+  
+   # Print rows
+  for (i in seq_len(nrow(df_char))) {
+    
+    row_text <- sapply(seq_along(df_char), function(j) {
+      
+      value <- as.character(df_char[i, j])
+      
+      # Left-align first column only when requested
+      if (j == 1 && first_col_left) {
+        left_text(value, widths[j])
+      } else {
+        center_text(value, widths[j])
+      }
+    })
+    
+    cat(paste(row_text, collapse = "  "), "\n")
+  }
+}
+  
   # bootstrap estimates
   EDM.out = vector("list",npath)
   for (c in 1:npath){
-    EDM.out[[c]] = EDM[[c]][-(bootsims+1),]
+    EDM.out[[c]] = EDM[[c]][-(boots+1),]
   }
-
+  
   # model fit
   mfit = vector("list", numberofm1+numberofm2+1)
   # model for first stage mediators
@@ -1322,13 +1478,98 @@ gmediate = function(data, model.m1, model.m2, model.y, expos, ref = NULL,
     mfit[[numberofm1+k]][[2]] = summary(modelb.m2[[k]])$coefficient
   }
   # model for y
-  mfit[[numberofm1+numberofm2+1]][[1]] = modelb.y$formula
+  if (family.y == "negbin")
+  {mfit[[numberofm1+numberofm2+1]][[1]] = call.y$formula} else
+  {mfit[[numberofm1+numberofm2+1]][[1]] = modelb.y$formula}
   mfit[[numberofm1+numberofm2+1]][[2]] = summary(modelb.y)$coefficient
+  
+  
+  cat("----------------------------------------\n")  
+  cat("Causal Mediation Sensitivity Analysis", "\n")
+  cat("Exposure ('exposed' value):",paste0(expos[1],"(", expos[2], ")", "\n"))
+  cat("Final Outcome:", y, "\n")
+  cat("Sample Size Used:", dim(gdata)[1], "\n")
+  cat("Number of Bootstrap Samples / Number Used:", dim(EDT)[1]-1, "/", boots, "\n")
+  if (!identical(ref, "entire sample")){
+    cat("Reference Group:", ref[1], "= (", ref[2:length(ref)], "),", "Reference Group Multiplier (refmult) =", refmult, "\n")
+  }
+  if (identical(ref, "entire sample")){
+    cat("Reference Group: Whole Sample,", "Reference Group Multiplier (refmult)=", refmult, "\n")
+  }
+  cat("Scale:", scale, "\n")
+  if (!is.null(cluster)){
+    cat("Cluster:", cluster, "\n")
+  }
+  cat("Confidence Interval Level:", CIPCT, "\n")
+  cat("----------------------------------------\n")
+  
+  cat("\n====================================\n")
+cat("Path-Specific Effects\n")
+cat("====================================\n")
+print_centered_table(table1n, first_col_left = TRUE)
 
+cat("\n====================================\n")
+cat("Total Effect\n")
+cat("====================================\n")
+print_centered_table(table2n)
+
+cat("\n====================================\n")
+cat("First Stage Mediators\n")
+cat("====================================\n")
+print_centered_table(table3n)
+
+cat("\n====================================\n")
+cat("Second Stage Mediators\n")
+cat("====================================\n")
+print_centered_table(table4n)
+
+cat("\n====================================\n")
+cat("Proportion: Path-Specific Effects\n")
+cat("====================================\n")
+print_centered_table(table5n, first_col_left = TRUE)
+
+cat("\n====================================\n")
+cat("Proportion: First Stage Mediators\n")
+cat("====================================\n")
+print_centered_table(table6n)
+
+cat("\n====================================\n")
+cat("Proportion: Second Stage Mediators\n")
+cat("====================================\n")
+print_centered_table(table7n)
+  
+##-- Export final output tables to one Excel file
+if (table_out[1] == "true") {
+  if (nchar(table_out[2]) == 0) {
+    print("WARNING: Please Specify Path to Save the Output Files")
+  } else {
+    final_tables <- list(
+      "Individual Path"        = table1n,
+      "Total Effect"           = table2n,
+      "First Stage"            = table3n,
+      "Second Stage"           = table4n,
+      "Prop Individual Path"   = table5n,
+      "Prop First Stage"       = table6n,
+      "Prop Second Stage"      = table7n
+    )
+    
+    if (!dir.exists(table_out[2])) {
+      dir.create(table_out[2], recursive = TRUE, showWarnings = FALSE)
+    }
+    
+    out_file <- file.path(
+      table_out[2],
+      "gmediate_summary_tables.xlsx"
+    )
+    
+    writexl::write_xlsx(
+      final_tables,
+      path = out_file
+    )
+  }
+}
+  
   return(invisible(list(indiv.path = table1n, total.path = table2n, first.path = table3n, second.path = table4n,
-              prop.indiv.path = table5n, prop.first.path = table6n, prop.second.path = table7n,
-              boot.est = EDM.out, model.fit = mfit)))
-
+                        prop.indiv.path = table5n, prop.first.path = table6n, prop.second.path = table7n,
+                        boot.est = EDM.out, model.fit = mfit)))
 }  #end of gmediate function
-
-

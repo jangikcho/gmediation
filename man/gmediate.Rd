@@ -4,82 +4,152 @@
 \alias{gmediate}
 \title{Generalized Causal Mediation and Path Analysis}
 \usage{
-gmediate(data, model.m1, model.m2, model.y, expos, ref = NULL, refmult = 1,
-  seed = 1234, bootsims = 500, cluster = NULL, decomp = 1,
-  sig.level = 95, sens.par = c(-0.9, 0, 0.5, 0.9))
+gmediate(
+  data,
+  model.m1,
+  model.m2,
+  model.y,
+  expos,
+  ref = "entire sample",
+  refmult = 100,
+  seed = 443095,
+  boots = 499,
+  cluster = NULL,
+  xcorrv = c(0, 0.5, 0.9),
+  scale = "MeanDiff",
+  CIPCT = 95,
+  decomp = 2,
+  table_out = c("false", "")
+)
 }
 \arguments{
-\item{data}{a data frame}
+\item{data}{a data frame containing all variables used in the outcome and
+mediator models.}
 
-\item{model.m1}{a list of the model fit from each first stage mediators}
+\item{model.m1}{a list of the model fit(s) for the first-stage mediator(s).}
 
-\item{model.m2}{a list of the model fit from each second stage mediators}
+\item{model.m2}{a list of the model fit(s) for the second-stage
+mediator(s).}
 
-\item{model.y}{an object of the model fit from the response variable}
+\item{model.y}{an object with the model fit for the response (outcome)
+variable.}
 
-\item{expos}{a vector with the name of the exposure variable and exposure value e.g. c("exposure variable name", c(exposure value))}
+\item{expos}{a vector with the name of the exposure variable and the
+exposure value, e.g. \code{c("exposure variable name", exposure value)}.}
 
-\item{ref}{a vector with the name of the reference group variable and reference group value e.g. c("reference group variable name", c(reference group value))}
+\item{ref}{reference group specification. Either the default
+\code{"entire sample"}, meaning the whole complete-case sample is used
+as the reference group, or a vector with the name of the reference group
+variable and the reference group value(s), e.g. \code{c("reference group
+variable name", c(reference group value))}.}
 
-\item{refmult}{numeric value used as a multiplier to increase the number of monte carlo draws}
+\item{refmult}{numeric multiplier used to increase the number of Monte
+Carlo draws taken from the reference group, to reduce Monte Carlo error.}
 
-\item{seed}{seed to generate bootstrap samples}
+\item{seed}{seed used to generate bootstrap samples.}
 
-\item{bootsims}{number of bootstrap samples to generate}
+\item{boots}{number of bootstrap samples to generate.}
 
-\item{cluster}{the cluster variable that will be used for cluster bootstrap resampling}
+\item{cluster}{the cluster variable used for cluster bootstrap resampling,
+if applicable. Default is \code{NULL} (individual-level resampling).}
 
-\item{decomp}{option with two choices for decomposition of total exposure effect}
+\item{xcorrv}{a vector of sensitivity parameter values (correlations, on
+the latent/linear predictor scale) used when a path is non-identifiable.}
 
-\item{sig.level}{confidence level for bootstrap confidence interval}
+\item{scale}{character string specifying the scale on which path effects
+are summarized (e.g. \code{"MeanDiff"}).}
 
-\item{sens.par}{a vector with numeric values for sensitivity parameters to be used when the path is non-identifiable}
+\item{CIPCT}{confidence level (as a percentage) used for the bootstrap
+confidence intervals.}
+
+\item{decomp}{integer (1 or 2) specifying which of two available
+decompositions of the total exposure effect is used to define path
+effects; the ordering of mediators in the specified models also
+generally affects the decomposition.}
+
+\item{table_out}{a length-2 character vector controlling whether the
+summary tables are written to disk. The first element is \code{"true"}
+or \code{"false"} (the default), and the second is the directory in
+which to write the Excel workbook \code{gmediate_summary_tables.xlsx}
+(created if it does not exist) when the first element is \code{"true"}.}
+}
+\value{
+An (invisible) list with the following components:
+\describe{
+  \item{indiv.path}{estimates and confidence intervals for individual path
+    effects.}
+  \item{total.path}{estimate and confidence interval for the total
+    exposure effect.}
+  \item{first.path}{estimates and confidence intervals for first-stage
+    mediator effects.}
+  \item{second.path}{estimates and confidence intervals for second-stage
+    mediator effects.}
+  \item{prop.indiv.path}{estimated proportions of the total effect
+    mediated through each individual path.}
+  \item{prop.first.path}{estimated proportions of the total effect
+    mediated through each first-stage mediator.}
+  \item{prop.second.path}{estimated proportions of the total effect
+    mediated through each second-stage mediator.}
+  \item{boot.est}{path effect estimates from all bootstrap samples.}
+  \item{model.fit}{model fits from the complete case data used to fit
+    each mediator and outcome model.}
+}
 }
 \description{
-This function estimates causal mediation and path effects for models with two stages of mediation
+Estimates causal mediation and path effects for models with up to two
+stages of mediation. The function allows an arbitrary number of mediators
+at each stage, computes individual path effects, first- and second-stage
+mediator effects, and the total exposure effect, and derives bootstrap
+confidence intervals for each.
 }
 \details{
-This function carries out inference for mediation (path) effects based on user-specified models. The function allows for two stages of mediation (up to three links from exposure/treatment, X, to final outcome, Y), and an arbitrary number of mediators at each stage. The user specifies an allowed generalized regression model for each outcome (Y and each mediator). Allowed distributions (link functions) include: normal (identity link), Bernoulli (logit link), Poisson (log link), and negative binomial (log link); note that canonical links are used for each distribution. Unsaturated models (i.e., leaving out earlier stage mediators) are allowed, possibly imposing a prior null paths. Baseline (pre-exposure) covariates may be included in each model. The user-specified models are re-fit in the function using the complete cases (based on all the model variables).
+This function carries out inference for mediation (path) effects based on
+user-specified models. The function allows for two stages of mediation (up
+to three links from exposure/treatment, X, to final outcome, Y), and an
+arbitrary number of mediators at each stage. The user specifies an allowed
+generalized regression model for each outcome (Y and each mediator).
+Allowed distributions (link functions) include: normal (identity link),
+Bernoulli (logit link), Poisson (log link), and negative binomial (log
+link); canonical links are used for each distribution. Unsaturated models
+(i.e., leaving out earlier stage mediators) are allowed. Baseline
+(pre-exposure) covariates may be included in each model. The user-specified
+models are re-fit in the function using the complete cases (based on all
+the model variables).
 
-The user may also specify a reference group, effectively defining the empirical multivariate baseline covariate distribution used in the mediation formula; this may be viewed as defining the sub-population to which inference is performed. The default reference group is the whole (complete case) sample. The reference group may also be ‘cloned’ by a specified integer multiple (“refmult”) to reduce Monte Carlo error (at the possible cost of longer computing time).
+The user may also specify a reference group, effectively defining the
+empirical multivariate baseline covariate distribution used in the
+mediation formula; this may be viewed as defining the sub-population to
+which inference is performed. The default reference group, \code{ref =
+"entire sample"}, is the whole (complete case) sample. The reference group
+may also be "cloned" by a specified integer multiple (\code{refmult}) to
+reduce Monte Carlo error (at the possible cost of longer computing time).
 
-An extended mediation formula is used to estimate each path effect. The sum of effects (or ‘overall effect’) for paths through each mediator is also computed. For paths (and overall) effects that are ‘non-identifiable’, multiple estimates are provided according to specified sensitivity parameters values (“sens.par”, a list of values between – 1 and 1), the default values being -0.9, 0, 0.5, and 0.9. Path effects have alternative versions depending on the manner in which the total exposure effect is decomposed. Two choices, using “decomp”, are provided; the ordering of mediators in specified models also generally affect the decomposition.
-
-Bootstrap resampling is used to obtain bootstrap percentile method confidence intervals (at the 95 percent, or user-specified, confidence level). The option “cluster” can be used to specify a unit (aside from the individual, that is, each data record, which is the default) for which cluster bootstrap resampling is performed.
+Bootstrap resampling is used to obtain bootstrap percentile method
+confidence intervals (at the specified confidence level, \code{CIPCT}).
+The option \code{cluster} can be used to specify a unit (aside from the
+individual, that is, each data record, which is the default) for which
+cluster bootstrap resampling is performed.
 }
 \examples{
-library(gmediation)
+\donttest{
+model.y1 <- glm(dmftd ~ ses + grpvlb + grpbpd + race + SEX + brush + seal,
+                 family = binomial, data = dental)
+model.m11 <- glm(brush ~ ses + grpvlb + grpbpd + race + SEX,
+                  family = binomial, data = dental)
+model.m21 <- glm(seal ~ ses + grpvlb + grpbpd + race + SEX + brush,
+                  family = binomial, data = dental)
 
-## mediation analysis for two stage mediators with one mediator at each stage
-model.y1 <- glm(dmftd ~ ses + grpvlb + grpbpd + race + SEX + brush + seal, family = binomial,
-                data = dental)
-model.m11 <- glm(brush ~ ses + grpvlb + grpbpd + race + SEX, family = binomial, data = dental)
-model.m21 <- glm(seal ~ ses + grpvlb + grpbpd + race + SEX + brush, family = binomial,
-                 data = dental)
-single <- gmediate(data = dental, model.m1 = list(model.m11), model.m2 = list(model.m21),
-                   model.y = model.y1, expos = c("ses", 1), ref = c("ses", c(0,1)), seed = 1234,
-                   bootsims = 100, cluster = NULL, decomp = 1, sig.level = 95, sens.par = c(0),
-                   refmult = 1)
+single <- gmediate(data = dental, model.m1 = list(model.m11),
+                    model.m2 = list(model.m21), model.y = model.y1,
+                    expos = c("ses", 1), seed = 1234, boots = 100,
+                    cluster = NULL, decomp = 1, CIPCT = 95,
+                    xcorrv = c(0, 0.9), refmult = 1)
 single
 names(single)
-
-\dontrun{
-## mediation analysis for two stage mediators with two mediator at each stage
-model.y2 <- glm(dmftd ~ ses + grpvlb + grpbpd + race + SEX + brush + visit + seal + ohi,
-                family = binomial, data = dental)
-model.m11 <- glm(brush ~ ses + grpvlb + grpbpd + race + SEX, family = binomial, data = dental)
-model.m12 <- glm(visit ~ ses + grpvlb + grpbpd + race + SEX, family = binomial, data = dental)
-model.m21 <- glm(seal ~ ses + grpvlb + grpbpd + race + SEX + brush + visit, family = binomial,
-                 data = dental)
-model.m22 <- glm(ohi ~ ses + grpvlb + grpbpd + race + SEX + brush + visit, family = gaussian,
-                 data = dental)
-gmediate(data = dental, model.m1 = list(model.m11,model.m12), model.m2 = list(model.m21,model.m22),
-         model.y = model.y2, expos = c("ses", 1), ref = c("ses", c(0,1)), seed = 352,
-         bootsims = 100, cluster = NULL, decomp = 2, sig.level = 95, sens.par = c(0,0.9),
-         refmult = 2)
 }
 
 }
 \seealso{
-\href{https://cran.r-project.org/package=mediation}{mediation}
+\code{\link{gmedsens}} for a probabilistic sensitivity analysis
+  built on the same modeling framework.
 }

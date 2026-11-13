@@ -1,17 +1,45 @@
 Package: gmediation
 Type: Package
 Title: Mediation Analysis for Multiple and Multi-Stage Mediators
-Version: 0.1.0
-Author: Jang Ik Cho, Jeffrey Albert
-Maintainer: Jang Ik Cho <jxc864@case.edu>
-Description: Current version of this R package conducts mediation path analysis for multiple mediators in two stages.
+Version: 1.0.0
+Authors@R: c(
+    person("Jang Ik", "Cho", email = "jxc864@case.edu", role = c("aut", "cre")),
+    person("Jeffrey", "Albert", role = "aut"))
+Description: Conducts causal mediation and path analysis for multiple
+    mediators arranged in up to two stages. The function gmediate() estimates
+    individual path effects, first- and second-stage mediator effects, and
+    the total exposure effect, together with bootstrap confidence intervals,
+    for models fit by the user for the outcome and for each mediator. The
+    function gmedsens() extends this to a probabilistic sensitivity analysis
+    that evaluates the robustness of path effect estimates to a range of
+    assumed correlations between residuals of non-identifiable paths. Both
+    functions default to using the entire (complete case) sample as the
+    reference group unless a different reference group is specified.
 License: GPL-2 | GPL-3
 Encoding: UTF-8
 LazyLoad: true
 LazyData: true
-Imports: plyr (>= 1.8.4), VGAM (>= 1.0), MASS
-Suggests: mediation, knitr, rmarkdown
-RoxygenNote: 6.0.1
+Depends: R (>= 4.1.0)
+Imports:
+    MASS,
+    plyr (>= 1.8.4),
+    VGAM (>= 1.0),
+    dplyr,
+    ggplot2,
+    gridExtra,
+    grid,
+    kableExtra,
+    knitr,
+    glue,
+    stringr,
+    writexl,
+    grDevices,
+    utils,
+    stats
+Suggests:
+    mediation,
+    rmarkdown,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
-NeedsCompilation: no
-Packaged: 2017-05-11 16:26:38 UTC; jangikcho
+RoxygenNote: 7.3.1
+Config/testthat/edition: 3

@@ -1,0 +1,13 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^data-raw$
+^README\.md$
+^\.github$
+^cran-comments\.md$
+^BUILD_INSTRUCTIONS\.md$
+^doc$
+^Meta$
+^\.git$
+^\.DS_Store$
+^gmediation_.*\.tar\.gz$
+^gmediation\.Rcheck$
