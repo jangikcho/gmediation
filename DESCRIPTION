@@ -1,7 +1,7 @@
 Package: gmediation
 Type: Package
 Title: Mediation Analysis for Multiple and Multi-Stage Mediators
-Version: 1.0.0
+Version: 2.0.0
 Authors@R: c(
     person("Jang Ik", "Cho", email = "jxc864@case.edu", role = c("aut", "cre")),
     person("Jeffrey", "Albert", role = "aut"))
@@ -22,24 +22,19 @@ LazyData: true
 Depends: R (>= 4.1.0)
 Imports:
     MASS,
-    plyr (>= 1.8.4),
-    VGAM (>= 1.0),
-    dplyr,
     ggplot2,
     gridExtra,
     grid,
-    kableExtra,
-    knitr,
-    glue,
-    stringr,
     writexl,
     grDevices,
     utils,
     stats
 Suggests:
+    knitr,
     mediation,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    covr
 VignetteBuilder: knitr
 RoxygenNote: 7.3.1
 Config/testthat/edition: 3

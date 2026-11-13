@@ -11,3 +11,4 @@
 ^\.DS_Store$
 ^gmediation_.*\.tar\.gz$
 ^gmediation\.Rcheck$
+^DEVELOPMENT\.md$

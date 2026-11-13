@@ -74,7 +74,10 @@ which to write the Excel workbook \code{gmediate_summary_tables.xlsx}
 (created if it does not exist) when the first element is \code{"true"}.}
 }
 \value{
-An (invisible) list with the following components:
+An object of class \code{"gmediate"}: a list with the following
+  components. Nothing is printed when the result is assigned; use
+  \code{print()} (or type the object's name) to display the analysis
+  settings and the summary tables:
 \describe{
   \item{indiv.path}{estimates and confidence intervals for individual path
     effects.}
@@ -93,6 +96,7 @@ An (invisible) list with the following components:
   \item{boot.est}{path effect estimates from all bootstrap samples.}
   \item{model.fit}{model fits from the complete case data used to fit
     each mediator and outcome model.}
+  \item{settings}{the analysis settings used by the print method.}
 }
 }
 \description{

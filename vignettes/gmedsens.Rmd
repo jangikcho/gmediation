@@ -50,7 +50,7 @@ install.packages("gmediation")
 or, from a local source tarball:
 
 ```r
-install.packages("gmediation_1.0.0.tar.gz", repos = NULL, type = "source")
+install.packages("gmediation_2.0.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ### Loading the package
@@ -163,8 +163,7 @@ Arguments used above:
 - `plot_out`, `table_out` : where to save the plots (one PDF file) and the
   tables (CSV files); see "Saving tables and plots" below
 
-`gmedsens()` is called for its output rather than its return value. The
-console shows the title of each page of the PDF, followed by a summary of the
+When the object is printed, the console shows the title of each page of the PDF, followed by a summary of the
 settings used (abbreviated here; this example produces 22 pages):
 
 ```
@@ -185,6 +184,10 @@ settings used (abbreviated here; this example produces 22 pages):
 #> Confidence Interval Percentage: 95
 #> g (between-correlation factor): 1
 #> ----------------------------------------
+#> Tables saved to:
+#>   <out_dir>/gmedsens_pathspec_out.csv
+#>   <out_dir>/gmedsens_firststage_out.csv
+#>   <out_dir>/gmedsens_secondstage_out.csv
 #> Plots saved to: <out_dir>/gmedsens_all_plots.pdf
 ```
 
@@ -214,7 +217,7 @@ knitr::include_graphics("gmedsens-mediator.png")
 A mediation effect whose confidence band stays on one side of zero for all
 plausible values of $\rho$ is robust to the un-testable assumption. If the
 band includes zero (as for `brush` here, where the band includes zero over
-most of the range and the estimate changes sign near $\rho = 0.25$), the
+the whole range and the estimate changes sign near $\rho = 0$), the
 conclusion depends on it.
 
 ## `gmedsens()`: Example 2 (two mediators per stage)
@@ -317,8 +320,11 @@ from the Cairo PDF device to the standard PDF device. In that case the arrows
 in the plot titles may be drawn as dots, but the plots themselves are
 unchanged.
 
-`gmedsens()` returns `NULL` invisibly; see `?gmedsens` for full details of
-each argument.
+`gmedsens()` returns an object of class `"gmedsens"` (with the tables
+`path`, `first.stage`, `second.stage`, the plotted `curves` and the
+`settings` used). The report shown above is printed when the analysis finishes, even when
+you assign the result (use `print_report = FALSE` to suppress it); it lists
+the files written and where, and `print(result)` shows it again. See `?gmedsens` for full details of each argument.
 
 ## See also
 
