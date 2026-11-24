@@ -29,7 +29,7 @@ data.
 }
 
 \author{
-\strong{Maintainer}: Jang Ik Cho \email{jxc864@case.edu}
+\strong{Maintainer}: Jang Ik Cho \email{cho.jangik@gmail.com}
 
 Authors:
 \itemize{
