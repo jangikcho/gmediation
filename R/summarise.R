@@ -5,15 +5,34 @@
 #' @param x numeric vector of bootstrap estimates (original sample excluded).
 #' @param lo,hi lower / upper quantile probabilities.
 #' @param na.rm passed to quantile().
+#' @param back function mapping the scale of `x` to the reported scale
+#'   (`exp` for OR / RR effects that are bootstrapped on the log scale). It is
+#'   applied to the CI limits only: the p-value is always computed on the scale
+#'   of `x`, where "no effect" is 0.
 #' @return list(lower, upper, p): CI limits rounded to 4 decimals and the
 #'   p-value as a string with 4 decimals.
 #' @noRd
-gm_boot_summary <- function(x, lo, hi, na.rm = TRUE) {
+gm_boot_summary <- function(x, lo, hi, na.rm = TRUE, back = identity) {
   list(
-    lower = unname(round(quantile(x, lo, na.rm = na.rm), 4)),
-    upper = unname(round(quantile(x, hi, na.rm = na.rm), 4)),
+    lower = unname(round(back(quantile(x, lo, na.rm = na.rm)), 4)),
+    upper = unname(round(back(quantile(x, hi, na.rm = na.rm)), 4)),
     p = gm_boot_pvalue(x)
   )
+}
+
+#' Function that maps log-scale OR / RR effects to the reported scale
+#' @param proportion proportions of the total effect stay on the bootstrap
+#'   (log) scale because they are ratios of additive effects.
+#' @noRd
+gm_scale_back <- function(scale, proportion = FALSE) {
+  if (scale %in% c("OR", "RR") && !proportion) exp else identity
+}
+
+#' Name of the effect column: "Estimate", or "OR" / "RR" for ratio scales
+#' @noRd
+gm_estimate_label <- function(scale, proportion = FALSE) {
+  if (proportion) return("Est Prop")
+  if (scale %in% c("OR", "RR")) scale else "Estimate"
 }
 
 #' Two-sided bootstrap p-value for H0: effect = 0

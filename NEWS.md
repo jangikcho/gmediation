@@ -35,6 +35,22 @@ verification against 1.0.0 are in `DEVELOPMENT.md` (source repository only).
 * **`gmedsens(tolx = )`** is deprecated and ignored (the iterative search it
   controlled was replaced by a direct computation); `tol` and `maxcnt` are
   kept.
+* **OR / RR output is on one scale.** With `scale = "OR"` or `"RR"`, every
+  table of `gmediate()` now reports exponentiated estimates and confidence
+  limits (previously the individual-path and total-effect tables showed log
+  ratios while the mediator tables were exponentiated), with the column named
+  `OR` or `RR`. `gmedsens()` first- and second-stage curves and tables are
+  exponentiated like its path tables. `boot.est` stays on the log scale, and
+  proportions of the total effect are computed on the log scale.
+* **Cluster bootstrap.** With `cluster`, the unique clusters are now resampled
+  with equal probability and all rows of a selected cluster are kept.
+  Version 1 drew cluster ids from the rows, so large clusters were selected
+  with probability proportional to their size. Results of clustered analyses
+  change.
+* **`gmedsens()` confidence limits** are the percentiles of the `boots`
+  bootstrap estimates; version 1 also included the original-sample estimate
+  among the replicates. Limits shift slightly (order 1/`boots`); estimates are
+  unchanged.
 * **Several assumption pairs share bootstrap samples.** With
   `assumvars = "ALL"`, version 1 redrew the bootstrap samples and refitted
   every model for each pair. Version 2 draws the samples once and fits each
@@ -73,6 +89,19 @@ verification against 1.0.0 are in `DEVELOPMENT.md` (source repository only).
   for a Poisson second-stage mediator was computed from stale data. Both are
   fixed. `scale = "OR"` and `"RR"` no longer stop with "the condition has
   length > 1".
+* P-values of exponentiated (OR / RR) mediator effects in `gmediate()` tested
+  the ratio against 0, so they were reported as 0.0000 for any positive
+  ratio (for example RR = 0.98, 95% CI 0.95 to 1.06, p = 0.0000). They now
+  test against 1 (the log ratio against 0).
+* `gmedsens()` with a Poisson or negative-binomial outcome: expected values
+  were computed with counts up to `maxcnt` (default 100) only, which gave
+  wrong results (about 0 for a mean of 200). The upper limit is now extended
+  automatically from the predicted means; `maxcnt` is the minimum.
+* Models with transformed terms (`I(x^2)`, `log(x)`, `factor(x)`, `poly()`)
+  failed ("undefined columns selected" or "variables not found in data");
+  the data variables are now taken from the model formula. Mediator models
+  with a single predictor failed ("incorrect number of subscripts on matrix");
+  fixed.
 * The convergence check looped over the last mediator only; it now checks
   every mediator model.
 * `gmedsens()` output folders: an empty folder name now gives a warning, and
@@ -111,12 +140,8 @@ verification against 1.0.0 are in `DEVELOPMENT.md` (source repository only).
 
 These behave as in version 1 and are flagged for a later decision.
 
-* Cluster bootstrap samples the cluster ids of individual rows rather than
-  the unique clusters.
 * `refmult` is ignored for the entire-sample reference group in `gmediate()`
   but applied in `gmedsens()`.
-* With `scale = "OR"` / `"RR"`, `gmedsens()` first- and second-stage tables
-  are not exponentiated (path tables are).
 * The binomial-outcome correction uses a power of 2 for outcome versus
   first-stage mediator and 1 elsewhere.
 * The Poisson-outcome loop in `gmedsens()` starts at the first second-stage
@@ -150,7 +175,7 @@ These behave as in version 1 and are flagged for a later decision.
   explicitly passed `ref = NULL` should be updated to omit `ref` or pass
   `ref = "entire sample"`.
 * Several `gmediate()` arguments were renamed relative to the previously
-  archived CRAN release (0.1.0): `bootsims` -> `boots`, `sig.level` ->
+  archived CRAN release (0.1.1): `bootsims` -> `boots`, `sig.level` ->
   `CIPCT`, `sens.par` -> `xcorrv`. The default `seed` also changed.
 
 * The package now depends on R (>= 4.1.0) (native pipe `|>`), and imports

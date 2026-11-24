@@ -57,7 +57,12 @@ if applicable. Default is \code{NULL} (individual-level resampling).}
 the latent/linear predictor scale) used when a path is non-identifiable.}
 
 \item{scale}{character string specifying the scale on which path effects
-are summarized (e.g. \code{"MeanDiff"}).}
+are summarized: \code{"MeanDiff"} (mean difference), \code{"OR"} (odds
+ratio) or \code{"RR"} (risk ratio). Ratio effects are bootstrapped on the
+log scale and reported exponentiated (estimates and confidence limits; the
+column is named \code{OR} or \code{RR}); the p-value tests the log ratio
+against 0, i.e. the ratio against 1. Proportions of the total effect are
+computed on the log scale.}
 
 \item{CIPCT}{confidence level (as a percentage) used for the bootstrap
 confidence intervals.}
@@ -93,7 +98,8 @@ An object of class \code{"gmediate"}: a list with the following
     mediated through each first-stage mediator.}
   \item{prop.second.path}{estimated proportions of the total effect
     mediated through each second-stage mediator.}
-  \item{boot.est}{path effect estimates from all bootstrap samples.}
+  \item{boot.est}{path effect estimates from all bootstrap samples (on the
+    log scale for \code{scale = "OR"} / \code{"RR"}).}
   \item{model.fit}{model fits from the complete case data used to fit
     each mediator and outcome model.}
   \item{settings}{the analysis settings used by the print method.}

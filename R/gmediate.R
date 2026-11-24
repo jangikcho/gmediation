@@ -56,7 +56,12 @@
 #' @param xcorrv a vector of sensitivity parameter values (correlations, on
 #'   the latent/linear predictor scale) used when a path is non-identifiable.
 #' @param scale character string specifying the scale on which path effects
-#'   are summarized (e.g. \code{"MeanDiff"}).
+#'   are summarized: \code{"MeanDiff"} (mean difference), \code{"OR"} (odds
+#'   ratio) or \code{"RR"} (risk ratio). Ratio effects are bootstrapped on the
+#'   log scale and reported exponentiated (estimates and confidence limits; the
+#'   column is named \code{OR} or \code{RR}); the p-value tests the log ratio
+#'   against 0, i.e. the ratio against 1. Proportions of the total effect are
+#'   computed on the log scale.
 #' @param CIPCT confidence level (as a percentage) used for the bootstrap
 #'   confidence intervals.
 #' @param decomp integer (1 or 2) specifying which of two available
@@ -88,7 +93,8 @@
 #'     mediated through each first-stage mediator.}
 #'   \item{prop.second.path}{estimated proportions of the total effect
 #'     mediated through each second-stage mediator.}
-#'   \item{boot.est}{path effect estimates from all bootstrap samples.}
+#'   \item{boot.est}{path effect estimates from all bootstrap samples (on the
+#'     log scale for \code{scale = "OR"} / \code{"RR"}).}
 #'   \item{model.fit}{model fits from the complete case data used to fit
 #'     each mediator and outcome model.}
 #'   \item{settings}{the analysis settings used by the print method.}
@@ -157,7 +163,7 @@ gmediate <- function(data, model.m1, model.m2, model.y, expos, ref = "entire sam
   ESTT <- round(res$EDT[boots + 1, ], 7)
   tables <- list(
     indiv.path = gm_path_table(res, ctx, boots, probs, ESTT),
-    total.path = gm_total_table(res$EDT, boots, probs, CIPCT),
+    total.path = gm_total_table(res$EDT, boots, probs, CIPCT, scale),
     first.path = gm_first_stage_table(res, ctx, boots, probs, ESTT),
     second.path = gm_second_stage_table(res, ctx, boots, probs, ESTT),
     prop.indiv.path = gm_path_table(res, ctx, boots, probs, ESTT, proportion = TRUE),

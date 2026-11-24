@@ -51,27 +51,43 @@ gm_family_name <- function(model) {
   fam
 }
 
+#' Names of the data variables used by a fitted model
+#'
+#' Terms such as `I(x^2)`, `log(x)` or `factor(x)` are reduced to the variable
+#' `x` in `data`: the model re-computes the transformation itself when it is
+#' refitted or used for prediction.
+#' @return list with the response variable and the covariates.
+#' @noRd
+gm_model_vars <- function(model) {
+  f <- stats::formula(stats::terms(model))
+  response <- all.vars(f[[2]])[1]
+  covariates <- setdiff(all.vars(f[[3]]), response)
+  list(response = response, covariates = covariates)
+}
+
 #' Extract everything the algorithms need from the user's fitted models
 #'
 #' @return a list with the variable names, covariate sets, distribution
 #'   families and calls of the outcome and mediator models.
 #' @noRd
 gm_model_spec <- function(model.y, model.m1, model.m2, n1, n2) {
-  yvar <- names(model.y$model)
-  y <- yvar[1]
-  y.allcov <- yvar[-1]
+  yvars <- gm_model_vars(model.y)
+  y <- yvars$response
+  y.allcov <- yvars$covariates
 
   m2 <- vector("list", n2)
   m2.eachcov <- vector("list", n2)
   for (i in seq_len(n2)) {
-    m2[[i]] <- names(model.m2[[i]]$model)[1]
-    m2.eachcov[[i]] <- names(model.m2[[i]]$model)[-1]
+    v <- gm_model_vars(model.m2[[i]])
+    m2[[i]] <- v$response
+    m2.eachcov[[i]] <- v$covariates
   }
   m1 <- vector("list", n1)
   m1.eachcov <- vector("list", n1)
   for (i in seq_len(n1)) {
-    m1[[i]] <- names(model.m1[[i]]$model)[1]
-    m1.eachcov[[i]] <- names(model.m1[[i]]$model)[-1]
+    v <- gm_model_vars(model.m1[[i]])
+    m1[[i]] <- v$response
+    m1.eachcov[[i]] <- v$covariates
   }
 
   m2.allcov <- unique(unlist(m2.eachcov))
@@ -178,12 +194,12 @@ gm_reference_data <- function(gdata, ref, refmult, repeat_entire = FALSE) {
 #'   pred.dat.m1.c, exposed, control).
 #' @noRd
 gm_prediction_data <- function(data.cr, gdata, spec, expos, with_m2o = FALSE) {
-  pred.dat.y <- data.cr[, spec$y.allcov]
+  pred.dat.y <- data.cr[, spec$y.allcov, drop = FALSE]
   pred.dat.m2 <- vector("list", spec$n2)
   pred.dat.m2o <- vector("list", spec$n2)
   for (k in seq_len(spec$n2)) {
-    pred.dat.m2[[k]] <- data.cr[, spec$m2.eachcov[[k]]]
-    if (with_m2o) pred.dat.m2o[[k]] <- data.cr[, spec$m2.eachcov[[k]]]
+    pred.dat.m2[[k]] <- data.cr[, spec$m2.eachcov[[k]], drop = FALSE]
+    if (with_m2o) pred.dat.m2o[[k]] <- data.cr[, spec$m2.eachcov[[k]], drop = FALSE]
   }
 
   lexp <- levels(as.factor(gdata[, expos[1]]))
@@ -193,7 +209,7 @@ gm_prediction_data <- function(data.cr, gdata, spec, expos, with_m2o = FALSE) {
   pred.dat.m1.e <- vector("list", spec$n1)
   pred.dat.m1.c <- vector("list", spec$n1)
   for (j in seq_len(spec$n1)) {
-    pred.dat.m1.e[[j]] <- pred.dat.m1.c[[j]] <- data.frame(data.cr[, spec$m1.eachcov[[j]]])
+    pred.dat.m1.e[[j]] <- pred.dat.m1.c[[j]] <- data.cr[, spec$m1.eachcov[[j]], drop = FALSE]
     colnames(pred.dat.m1.e[[j]]) <- c(spec$m1.eachcov[[j]])
     colnames(pred.dat.m1.c[[j]]) <- c(spec$m1.eachcov[[j]])
     pred.dat.m1.e[[j]][, expos[1]] <- exposed
@@ -206,7 +222,10 @@ gm_prediction_data <- function(data.cr, gdata, spec, expos, with_m2o = FALSE) {
 
 #' Bootstrap samples (the last element is the original sample)
 #'
-#' Consumes the random-number stream exactly as version 1 did.
+#' Without a cluster variable rows are resampled with replacement. With a
+#' cluster variable, the *unique clusters* are resampled with equal
+#' probability and every row of a selected cluster is kept (version 1 drew
+#' cluster ids from the rows, which favoured large clusters).
 #' @return list of `boots + 1` data frames.
 #' @noRd
 gm_boot_samples <- function(gdata, boots, cluster = NULL) {
@@ -219,12 +238,13 @@ gm_boot_samples <- function(gdata, boots, cluster = NULL) {
       bootsamples[[i]] <- gdata[samp, ]
     }
   } else {
-    nclus <- length(unique(gdata[, cluster]))
     cl <- gdata[, cluster]
+    ucl <- unique(cl)
+    nclus <- length(ucl)
+    rows_of <- split(seq_along(cl), match(cl, ucl))
     for (i in 1:boots) {
-      samp <- sample(cl, size = nclus, replace = TRUE)
-      rows <- unlist(lapply(samp, function(s) which(cl == s)), use.names = FALSE)
-      bootsamples[[i]] <- gdata[rows, ]
+      pick <- sample.int(nclus, size = nclus, replace = TRUE)
+      bootsamples[[i]] <- gdata[unlist(rows_of[pick], use.names = FALSE), ]
     }
   }
   bootsamples[[boots + 1]] <- gdata

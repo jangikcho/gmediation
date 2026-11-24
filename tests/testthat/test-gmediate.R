@@ -55,10 +55,49 @@ test_that("gmediate supports decomposition 2, subsets of the reference group and
 
 test_that("the risk ratio scale returns non-zero path effects (regression)", {
   res <- run_gmediate(bin_models(), scale = "RR", xcorrv = 0)
-  est <- suppressWarnings(as.numeric(res$indiv.path$Estimate))
-  expect_true(any(abs(est) > 1e-8, na.rm = TRUE))
+  est <- suppressWarnings(as.numeric(res$indiv.path$RR))
+  expect_true(any(abs(est - 1) > 1e-8, na.rm = TRUE))
   or <- run_gmediate(bin_models(), scale = "OR", xcorrv = 0)
   expect_s3_class(or, "gmediate")
+})
+
+test_that("OR / RR tables are exponentiated everywhere and p-values test against 1", {
+  res <- run_gmediate(bin_models(), scale = "RR", xcorrv = 0, boots = 30)
+  expect_true("RR" %in% names(res$indiv.path))
+  expect_true("RR" %in% names(res$total.path))
+  expect_true("RR" %in% names(res$first.path))
+  expect_true("RR" %in% names(res$second.path))
+  expect_true(all(c(res$total.path$RR, res$first.path$RR, res$second.path$RR) > 0))
+  # mediator estimate on the ratio scale lies near 1, and its p-value is not 0
+  # merely because the effect is positive
+  expect_true(abs(res$first.path$RR - 1) < 0.5)
+  expect_gt(as.numeric(res$first.path$`p-value`), 0)
+  # proportions stay on the additive (log) scale
+  expect_true("Est Prop" %in% names(res$prop.first.path))
+  # the mean-difference scale keeps the "Estimate" label
+  md <- run_gmediate(bin_models(), xcorrv = 0)
+  expect_true("Estimate" %in% names(md$first.path))
+})
+
+test_that("transformed model terms such as I(x^2) and log(x) are supported", {
+  m <- mix_models()
+  m$y <- glm(dmftd ~ ses + grpvlb + grpbpd + race + SEX + brush + seal + ohi + I(ohi^2) +
+               log(ohi + 5), family = binomial, data = dental)
+  res <- run_gmediate(m, boots = 3, xcorrv = 0)
+  expect_s3_class(res, "gmediate")
+  expect_equal(res$settings$y, "dmftd")
+  sens <- run_gmedsens(m, boots = 2, xcorrv = 0, deltsi = 0.5, assumvars = c("dmftd", "brush"))
+  expect_s3_class(sens, "gmedsens")
+})
+
+test_that("mediator models with a single predictor are supported", {
+  m <- bin_models()
+  m$m1 <- list(glm(brush ~ ses, family = binomial, data = dental))
+  m$m2 <- list(glm(seal ~ brush, family = binomial, data = dental))
+  m$y <- glm(dmftd ~ ses + brush + seal, family = binomial, data = dental)
+  expect_s3_class(run_gmediate(m, boots = 3, xcorrv = 0), "gmediate")
+  expect_s3_class(run_gmedsens(m, boots = 2, xcorrv = 0, deltsi = 0.5,
+                               assumvars = c("dmftd", "brush")), "gmedsens")
 })
 
 test_that("a Gaussian outcome and negative binomial mediators are supported", {

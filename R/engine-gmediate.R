@@ -194,18 +194,16 @@ gm_run_bootstrap <- function(bootsamples, ctx) {
     EDMM1[c, ] <- EDM[[c]][, 1]
     for (jd in seq_len(nrho)) EDMM2[[jd]][c, ] <- EDM[[c]][, jd]
   }
-  exp_scale <- scale == "OR" || scale == "RR"
   EDB1 <- lapply(seq_len(spec$n1), function(j) {
     distinguish <- sapply(1:ncol(EDMM1), function(x) EDMM1[, x] * (ctx$indexDM[1, ] == j + 1))
     s <- sapply(1:ncol(distinguish), function(x) sum(distinguish[, x], na.rm = TRUE))
-    if (exp_scale) exp(s) else s
+    s
   })
   EDB2 <- lapply(seq_len(spec$n2), function(k) {
     m <- matrix(0, nrho, B)
     for (jd in seq_len(nrho)) {
       distinguish <- sapply(1:ncol(EDMM2[[jd]]), function(x) EDMM2[[jd]][, x] * (ctx$indexDM[2, ] == k + 1))
       m[jd, ] <- sapply(1:ncol(distinguish), function(x) sum(distinguish[, x], na.rm = TRUE))
-      if (exp_scale) m[jd, ] <- exp(m[jd, ])
     }
     m
   })

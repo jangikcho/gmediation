@@ -4,7 +4,9 @@ test_that("gs_curve_data summarises bootstrap columns and applies the transform"
   d <- gmediation:::gs_curve_data(boot, c(0.025, 0.975), 5, c(-0.5, 0, 0.5, 0.9))
   expect_equal(names(d), c("rho", "estimate", "lower", "upper"))
   expect_equal(d$estimate, boot[6, ])
-  expect_equal(d$lower, unname(apply(boot, 2, quantile, 0.025)))
+  # the limits use the 5 bootstrap rows only; row 6 is the original estimate
+  expect_equal(d$lower, unname(apply(boot[1:5, ], 2, quantile, 0.025)))
+  expect_false(isTRUE(all.equal(d$lower, unname(apply(boot, 2, quantile, 0.025)))))
   expect_true(all(d$lower <= d$upper))
   e <- gmediation:::gs_curve_data(boot, c(0.025, 0.975), 5, 1:4, transform = exp)
   expect_equal(e$estimate, exp(boot[6, ]))

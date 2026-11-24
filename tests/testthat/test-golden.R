@@ -1,9 +1,14 @@
 # Regression tests against frozen results.
-#  * g_bin11_d1, g_bin11_d2, g_mix22_clu, g_ygau, s_bin11_spec, s_mix22_spec:
-#    output of gmediation 1.0.0 -- version 2 must reproduce it.
+#  * g_bin11_d1, g_bin11_d2, g_ygau: output of gmediation 1.0.0 -- version 2
+#    must reproduce it.
+#  * g_mix22_clu, s_bin11_spec, s_mix22_spec: output of 1.0.0, updated in 2.0.0
+#    only where the fix is intended: the cluster bootstrap now resamples whole
+#    clusters with equal probability, and gmedsens() confidence limits no longer
+#    include the original estimate (estimates and rho grid are unchanged).
 #  * g_bin11_RR, s_bin11_spec2: output of version 2 where version 1 was wrong
-#    (risk-ratio path effects were all zero; the binary second-stage mediator
-#    correction in gmedsens() had the wrong direction).
+#    (risk-ratio path effects were all zero and were then reported on the log
+#    scale; the binary second-stage mediator correction in gmedsens() had the
+#    wrong direction).
 
 golden <- function() readRDS(test_path("fixtures", "golden.rds"))
 

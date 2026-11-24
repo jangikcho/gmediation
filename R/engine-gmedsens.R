@@ -288,19 +288,30 @@ gs_corrected_m2 <- function(fam, mu, stdv, disp, crctm2, rho, u, nref) {
   NULL
 }
 
+# Largest count that has to be summed so that the corrected distribution is
+# covered: `maxcnt` is a minimum; it is raised when the predicted means (and
+# the shift caused by the correction) need larger counts.
+gs_count_limit <- function(muY0, crct, rho, fam, disp.y, tol, maxcnt) {
+  shift <- max(abs(crct)) / sqrt(1 - rho**2)
+  p <- min(pnorm(qnorm(1 - tol) + shift), 1 - 1e-12)
+  q <- if (fam == "poisson") qpois(p, max(muY0)) else qnbinom(p, mu = max(muY0), size = disp.y)
+  max(maxcnt, ceiling(q) + 2)
+}
+
 # Expected value of Y given the (corrected) prediction data.
 gs_outcome_mean <- function(muY0, crct, rho, fam, stdv.y, disp.y, ctx, j_start) {
   nref <- ctx$nref
   if (fam == "gaussian") return(muY0 + stdv.y * crct)
   if (fam == "binomial") return(1 - pnorm(qnorm(1 - muY0) - crct))
   if (fam == "poisson" || fam == "negbin") {
+    limit <- gs_count_limit(muY0, crct, rho, fam, disp.y, ctx$tol, ctx$maxcnt)
     j1 <- 0
     j <- j_start # version 1 started from the last loop index; see NEWS
     Pj <- matrix(0, 1, nref)
     sumPj <- matrix(0, 1, nref)
     PjT <- matrix(1 - ctx$tol, 1, nref) # tolerance should be close to 1
     chk <- 0
-    while (chk < nref & j < ctx$maxcnt) {
+    while (chk < nref & j < limit) {
       j <- j1 - 1
       j1 <- j1 + 1
       P0j <- if (fam == "poisson") ppois(j, muY0) else pnbinom(j, mu = muY0, size = disp.y)
