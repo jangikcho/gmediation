@@ -2,11 +2,15 @@
 
 ## Resubmission after archival
 
-`gmediation` (version 0.1.0) was previously on CRAN and was archived on
-2020-05-19 because check problems were not corrected in time. This
-submission (version 2.0.0) addresses [[NOTE: fill in specifically what the
-original check problems were and how they were resolved, once you have
-reproduced them with the current R CMD check output]].
+`gmediation` (version 0.1.1) was archived on 2020-05-19 because check
+problems were not corrected in time. The check results of that date reported
+(1) a WARNING in the examples, "'VGAM::probit' is deprecated" (on all
+platforms), together with the `gmediate()` example exceeding the 5-second time
+limit, and (2) a NOTE that the vignette `gmediate.Rmd` had the placeholder
+title "Vignette Title". In version 2.0.0 the dependency on VGAM is removed (the
+probit link is computed with `qnorm()` / `pnorm()`), the long examples are
+wrapped in `\donttest{}`, and both vignettes have proper titles. This
+submission is version 2.0.0.
 
 ## Summary of changes since the archived version
 

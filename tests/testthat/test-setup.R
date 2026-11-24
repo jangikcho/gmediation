@@ -193,3 +193,28 @@ test_that("gm_normalise_ref treats NULL as the entire sample", {
   expect_identical(gm_normalise_ref(c("SEX", 1)), c("SEX", 1))
   expect_error(gm_normalise_ref("SEX"), "ref")
 })
+
+test_that("gm_model_vars reduces transformed terms to data variables", {
+  m <- glm(dmftd ~ ses + I(ohi^2) + log(ohi + 5) + factor(race) + ohi, family = binomial, data = dental)
+  v <- gmediation:::gm_model_vars(m)
+  expect_equal(v$response, "dmftd")
+  expect_equal(v$covariates, c("ses", "ohi", "race"))
+  one <- glm(brush ~ ses, family = binomial, data = dental)
+  expect_equal(gmediation:::gm_model_vars(one)$covariates, "ses")
+})
+
+test_that("cluster bootstrap resamples whole clusters with equal probability", {
+  set.seed(1)
+  g <- data.frame(id = 1:30, cl = rep(1:3, c(2, 8, 20)), y = rnorm(30))
+  bs <- gmediation:::gm_boot_samples(g, boots = 1500, cluster = "cl")
+  expect_length(bs, 1501)
+  expect_identical(bs[[1501]], g)
+  # every selected cluster is complete: row counts are multiples of the cluster size
+  one <- bs[[1]]
+  expect_true(all(table(one$cl) %% c(2, 8, 20)[as.integer(names(table(one$cl)))] == 0))
+  share <- rowSums(sapply(bs[1:1500], function(d) tabulate(unique(d$cl), 3))) / 1500
+  expect_true(all(abs(share - (1 - (2 / 3)^3)) < 0.05))
+  # a single cluster is allowed
+  g1 <- data.frame(id = 1:4, cl = 7, y = 1:4)
+  expect_equal(nrow(gmediation:::gm_boot_samples(g1, 2, "cl")[[1]]), 4)
+})

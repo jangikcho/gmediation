@@ -2,11 +2,12 @@
 # sensitivity curves (used for plots) and summary tables (written to CSV).
 
 # Estimate and percentile confidence limits over the grid of rho values.
-# `boot_mat` has one row per bootstrap sample (the last row is the original
-# sample) and one column per value of rho.
+# `boot_mat` has one row per bootstrap sample plus a last row holding the
+# original-sample estimate, and one column per value of rho. The confidence
+# limits use the `boots` bootstrap rows only.
 gs_curve_data <- function(boot_mat, probs, boots, rho_plot, transform = identity) {
   boot_mat <- matrix(boot_mat, nrow = boots + 1)
-  q <- apply(boot_mat, 2, quantile, probs)
+  q <- apply(boot_mat[seq_len(boots), , drop = FALSE], 2, quantile, probs)
   data.frame(
     rho = rho_plot,
     estimate = transform(boot_mat[boots + 1, ]),
@@ -79,7 +80,7 @@ gs_pair_outputs <- function(acc, ctx, boots, probs, ndig, assumvars, i1, i2) {
   # -- total effect through each first-stage mediator
   for (j in seq_len(sp$n1)) {
     if (!all_assum && !(sp$m1[[j]] %in% assumvars)) next
-    curve <- gs_curve_data(acc$EDM1_SC[[j]], probs, boots, rho_plot)
+    curve <- gs_curve_data(acc$EDM1_SC[[j]], probs, boots, rho_plot, scale_back)
     curves[[length(curves) + 1]] <-
       gs_curve_record("first", paste0("Mediator = ", sp$m1[[j]]), "Estimated Mediator Effect", curve)
     first_tabs[[length(first_tabs) + 1]] <-
@@ -90,7 +91,7 @@ gs_pair_outputs <- function(acc, ctx, boots, probs, ndig, assumvars, i1, i2) {
   for (k in seq_len(sp$n2)) {
     if (!all_assum && !(sp$m2[[k]] %in% assumvars)) next
     for (xci in seq_len(nxcorr)) {
-      curve <- gs_curve_data(acc$EDM2_SC[[k]][, , xci], probs, boots, rho_plot)
+      curve <- gs_curve_data(acc$EDM2_SC[[k]][, , xci], probs, boots, rho_plot, scale_back)
       title <- paste0("Mediator = ", sp$m2[[k]], ", xcorr = ", ctx$xcorrv[[xci]])
       curves[[length(curves) + 1]] <-
         gs_curve_record("second", title, "Estimated Mediator Effect", curve)

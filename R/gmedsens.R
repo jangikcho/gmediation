@@ -104,8 +104,10 @@
 #' @param print_report print the report when the analysis finishes (default
 #'   \code{TRUE}). It lists the output files and their location, so it is shown
 #'   even when the result is assigned. Use \code{FALSE} to suppress it.
-#' @param maxcnt maximum number of iterations allowed in the internal
-#'   root-finding routines used for the sensitivity calculations.
+#' @param maxcnt smallest upper limit of the counts summed to obtain the
+#'   expected value of a Poisson or negative-binomial outcome. The limit is
+#'   increased automatically when the predicted means need larger counts
+#'   (for example a mean of 200), so the default rarely needs changing.
 #'
 #' @return An object of class \code{"gmedsens"}, a list with elements
 #'   \describe{

@@ -109,3 +109,15 @@ test_that("gs_get returns NULL outside the list", {
   expect_equal(gmediation:::gs_get(list(1, 2), 2), 2)
   expect_null(gmediation:::gs_get(list(1, 2), 3))
 })
+
+test_that("expected Poisson / negative-binomial outcomes are not truncated at maxcnt", {
+  ctx <- list(nref = 5, tol = 1e-4, maxcnt = 100)
+  v <- gmediation:::gs_outcome_mean(rep(200, 5), crct = rep(0, 5), rho = 0, fam = "poisson",
+                                    stdv.y = 1, disp.y = NULL, ctx = ctx, j_start = 0)
+  expect_equal(mean(v), 200, tolerance = 0.01)
+  nb <- gmediation:::gs_outcome_mean(rep(150, 5), crct = rep(0, 5), rho = 0, fam = "negbin",
+                                     stdv.y = 1, disp.y = 5, ctx = ctx, j_start = 0)
+  expect_equal(mean(nb), 150, tolerance = 0.02)
+  expect_gte(gmediation:::gs_count_limit(rep(200, 3), 0, 0, "poisson", NULL, 1e-4, 100), 200)
+  expect_equal(gmediation:::gs_count_limit(rep(2, 3), 0, 0, "poisson", NULL, 1e-4, 100), 100)
+})

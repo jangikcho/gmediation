@@ -74,9 +74,18 @@ negative binomial; 1x1 and 2x2 mediators; cluster bootstrap; subset reference;
 
 ## Known issues not changed (see NEWS.md)
 
-Cluster bootstrap by row; `refmult` handling differs between functions; OR/RR
-not exponentiated in `gmedsens` mediator tables; `binom_power = 2` for
-outcome versus first-stage mediator; start index of the Poisson outcome loop.
+`refmult` handling differs between functions; `binom_power = 2` for outcome
+versus first-stage mediator; start index of the Poisson outcome loop.
+
+## Changes after the first review round
+
+Reported by a reviewer and fixed in 2.0.0 (see NEWS.md): the original estimate
+inside the `gmedsens()` confidence limits; cluster bootstrap probability
+proportional to cluster size; OR/RR p-values tested against 0 and mixed
+log/exponentiated scales; truncation at `maxcnt` for large counts; transformed
+terms such as `I(x^2)`; single-predictor mediator models. The golden fixtures
+for the cluster case and the single-pair `gmedsens()` cases were regenerated
+(only CI columns, or the clustered resamples, differ from 1.0.0).
 
 ## Release checklist
 

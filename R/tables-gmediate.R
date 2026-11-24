@@ -15,13 +15,14 @@ gm_ci_names <- function(CIPCT) {
 #'   proportions); the original-sample estimate is passed in `est_orig`.
 #' @return list(est, lower, upper, p) vectors of length `ncols`.
 #' @noRd
-gm_summarise_columns <- function(boot_mat, ncols, boots, probs, ratio_by = NULL) {
+gm_summarise_columns <- function(boot_mat, ncols, boots, probs, ratio_by = NULL,
+                                 back = identity) {
   out <- list(est = numeric(ncols), lower = numeric(ncols), upper = numeric(ncols),
               p = character(ncols))
   for (jd in seq_len(ncols)) {
     x <- boot_mat[1:boots, jd]
     if (!is.null(ratio_by)) x <- x / ratio_by[1:boots]
-    s <- gm_boot_summary(x, probs[1], probs[2], na.rm = TRUE)
+    s <- gm_boot_summary(x, probs[1], probs[2], na.rm = TRUE, back = back)
     out$lower[jd] <- s$lower
     out$upper[jd] <- s$upper
     out$p[jd] <- s$p
@@ -42,6 +43,7 @@ gm_path_table <- function(res, ctx, boots, probs, ESTT, proportion = FALSE) {
   nullv <- last$nullv
   m1ex <- c("   ", spec$m1)
   m2ex <- c("   ", spec$m2)
+  back <- gm_scale_back(ctx$scale, proportion)
 
   e1 <- e2 <- rho <- character(0)
   est <- lb <- ub <- pv <- list()
@@ -52,8 +54,9 @@ gm_path_table <- function(res, ctx, boots, probs, ESTT, proportion = FALSE) {
                     upper = rep("*", ncols), p = rep("*", ncols))
     } else {
       cells <- gm_summarise_columns(res$EDM[[c]], ncols, boots, probs,
-                                    ratio_by = if (proportion) res$EDT[, 1] else NULL)
-      cells$est <- round(res$EDM[[c]][boots + 1, seq_len(ncols)], 7)
+                                    ratio_by = if (proportion) res$EDT[, 1] else NULL,
+                                    back = back)
+      cells$est <- round(back(res$EDM[[c]][boots + 1, seq_len(ncols)]), 7)
       if (proportion) cells$est <- round(cells$est / ESTT, 4)
     }
     for (jd in seq_len(ncols)) {
@@ -77,18 +80,19 @@ gm_path_table <- function(res, ctx, boots, probs, ESTT, proportion = FALSE) {
                     Estimate = unlist(est), `CI Lower` = unlist(lb),
                     `CI Upper` = unlist(ub), `p-value` = unlist(pv),
                     check.names = FALSE)
-  colnames(tab) <- c("Path", "Xcorr", if (proportion) "Estimate" else "Estimate",
+  colnames(tab) <- c("Path", "Xcorr", if (proportion) "Estimate" else gm_estimate_label(ctx$scale),
                      gm_ci_names(ctx$CIPCT), "p-value")
   tab
 }
 
 #' Total-effect table (one row named "Total")
 #' @noRd
-gm_total_table <- function(EDT, boots, probs, CIPCT) {
-  ESTT <- round(EDT[boots + 1, ], 7)
-  s <- gm_boot_summary(EDT[1:boots, ], probs[1], probs[2], na.rm = TRUE)
+gm_total_table <- function(EDT, boots, probs, CIPCT, scale = "MeanDiff") {
+  back <- gm_scale_back(scale)
+  ESTT <- round(back(EDT[boots + 1, ]), 7)
+  s <- gm_boot_summary(EDT[1:boots, ], probs[1], probs[2], na.rm = TRUE, back = back)
   tab <- data.frame(ESTT, s$lower, s$upper, s$p)
-  colnames(tab) <- c("Estimate", gm_ci_names(CIPCT), "p-value")
+  colnames(tab) <- c(gm_estimate_label(scale), gm_ci_names(CIPCT), "p-value")
   rownames(tab) <- "Total"
   tab
 }
@@ -97,19 +101,20 @@ gm_total_table <- function(EDT, boots, probs, CIPCT) {
 #' @noRd
 gm_first_stage_table <- function(res, ctx, boots, probs, ESTT, proportion = FALSE) {
   n1 <- ctx$spec$n1
+  back <- gm_scale_back(ctx$scale, proportion)
   est <- lb <- ub <- pv <- numeric(0)
   for (j in seq_len(n1)) {
-    e <- round(res$EDB1[[j]][boots + 1], 7)
+    e <- round(back(res$EDB1[[j]][boots + 1]), 7)
     x <- res$EDB1[[j]][1:boots]
     if (proportion) {
       e <- round(e / ESTT, 4)
       x <- x / res$EDT[1:boots, 1]
     }
-    s <- gm_boot_summary(x, probs[1], probs[2], na.rm = TRUE)
+    s <- gm_boot_summary(x, probs[1], probs[2], na.rm = TRUE, back = back)
     est[j] <- e; lb[j] <- s$lower; ub[j] <- s$upper; pv[j] <- s$p
   }
   tab <- data.frame(unlist(ctx$spec$m1), est, lb, ub, pv)
-  colnames(tab) <- c("Mediator", if (proportion) "Est Prop" else "Estimate",
+  colnames(tab) <- c("Mediator", gm_estimate_label(ctx$scale, proportion),
                      gm_ci_names(ctx$CIPCT), "p-value")
   tab
 }
@@ -119,16 +124,17 @@ gm_first_stage_table <- function(res, ctx, boots, probs, ESTT, proportion = FALS
 gm_second_stage_table <- function(res, ctx, boots, probs, ESTT, proportion = FALSE) {
   n2 <- ctx$spec$n2
   nrho <- ctx$nrho
+  back <- gm_scale_back(ctx$scale, proportion)
   names_ <- est <- lb <- ub <- pv <- list()
   for (k in seq_len(n2)) {
     for (jd in seq_len(nrho)) {
-      e <- round(res$EDB2[[k]][jd, boots + 1], 7)
+      e <- round(back(res$EDB2[[k]][jd, boots + 1]), 7)
       x <- res$EDB2[[k]][jd, 1:boots]
       if (proportion) {
         e <- round(e / ESTT, 4)
         x <- x / res$EDT[1:boots, 1]
       }
-      s <- gm_boot_summary(x, probs[1], probs[2], na.rm = proportion)
+      s <- gm_boot_summary(x, probs[1], probs[2], na.rm = proportion, back = back)
       names_[[length(names_) + 1]] <- paste(ctx$spec$m2[[k]])
       est[[length(est) + 1]] <- e; lb[[length(lb) + 1]] <- s$lower
       ub[[length(ub) + 1]] <- s$upper; pv[[length(pv) + 1]] <- s$p
@@ -136,7 +142,7 @@ gm_second_stage_table <- function(res, ctx, boots, probs, ESTT, proportion = FAL
   }
   rho <- sprintf("%.1f", rep(ctx$xcorrv, n2))
   tab <- data.frame(unlist(names_), rho, unlist(est), unlist(lb), unlist(ub), unlist(pv))
-  colnames(tab) <- c("Mediator", "Xcorr", if (proportion) "Est Prop" else "Estimate",
+  colnames(tab) <- c("Mediator", "Xcorr", gm_estimate_label(ctx$scale, proportion),
                      gm_ci_names(ctx$CIPCT), "p-value")
   tab
 }

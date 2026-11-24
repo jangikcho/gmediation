@@ -126,8 +126,10 @@ directory (created if it does not exist) in which to write the CSV files
 variables are evaluated (\code{assumvars = "ALL"}), the files contain the
 results for every pair, identified by the \code{Rho.Between} column.}
 
-\item{maxcnt}{maximum number of iterations allowed in the internal
-root-finding routines used for the sensitivity calculations.}
+\item{maxcnt}{smallest upper limit of the counts summed to obtain the
+expected value of a Poisson or negative-binomial outcome. The limit is
+increased automatically when the predicted means need larger counts
+(for example a mean of 200), so the default rarely needs changing.}
 
 \item{print_report}{print the report when the analysis finishes (default
 \code{TRUE}). It lists the output files and their location, so it is shown
